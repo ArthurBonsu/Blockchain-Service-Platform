@@ -1,170 +1,356 @@
-import React, { useEffect, useState } from "react";
-import { ethers } from "ethers";
-import { BlockchainTransaction } from "types/ethers";
-import { PaymentTransactions } from "types";
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { ethers } from 'ethers';
 
-const contractABI = "";
-const contractAddress = "";
+// Interfaces for type safety
+interface LandDetails {
+  landId: number;
+  landOwner: string;
+  landLocation: string;
+  landSize: number;
+  landPrice: number;
+  geohash?: string;
+  isActive?: boolean;
+}
 
-const { ethereum } = window;
+interface PriceRecord {
+  price: number;
+  timestamp: number;
+  recorder: string;
+}
 
-const useLandPaymentContext = () => {
-  const createEthereumContract = async () => {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = await provider.getSigner();
-    const landPaymentContract = new ethers.Contract(contractAddress, contractABI, signer);
-    return landPaymentContract;
-  };
+interface LandOwnershipContextType {
+  // Wallet and Connection
+  currentAccount: string | null;
+  connectWallet: () => Promise<void>;
+  
+  // Land Operations
+  registerLand: (landDetails: LandDetails) => Promise<string>;
+  transferLand: (landId: number, newOwner: string) => Promise<string>;
+  updateLandPrice: (landId: number, newPrice: number) => Promise<string>;
+  buyLand: (landId: number, price: number) => Promise<string>;
+  deregisterLand: (landId: number, reason: string) => Promise<string>;
+  
+  // Retrieval Methods
+  getLandDetails: (landId: number) => Promise<LandDetails>;
+  getAllLands: () => Promise<LandDetails[]>;
+  
+  // Price and Royalty Features
+  getLandPriceHistory: (landId: number) => Promise<PriceRecord[]>;
+  getRoyaltyBalance: () => Promise<number>;
+  claimRoyalties: () => Promise<string>;
+  
+  // State and Utility
+  landRegistry: LandDetails[];
+  landPriceHistory: PriceRecord[];
+  royaltyBalance: number;
+  isLoading: boolean;
+  transactions: any[];
+}
 
-  const [formData, setFormData] = useState({
-    landAddress: "",
-    amount: "",
-    message: "",
-  });
+// Create context
+const LandOwnershipContext = createContext<LandOwnershipContextType | undefined>(undefined);
 
-  const [currentAccount, setCurrentAccount] = useState("");
+// Provider Component
+export const LandOwnershipProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // State Variables
+  const [currentAccount, setCurrentAccount] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [transactionCount, setTransactionCount] = useState(localStorage.getItem("transactionCount"));
-  const [transactions, setTransactions] = useState([]);
+  const [landRegistry, setLandRegistry] = useState<LandDetails[]>([]);
+  const [landPriceHistory, setLandPriceHistory] = useState<PriceRecord[]>([]);
+  const [royaltyBalance, setRoyaltyBalance] = useState(0);
+  const [transactions, setTransactions] = useState<any[]>([]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>, name: string) => {
-    setFormData((prevState) => ({ ...prevState, [name]: e.target.value }));
+  // Ethereum Contract Setup
+  const createEthereumContract = async () => {
+    const { ethereum } = window;
+    if (!ethereum) throw new Error('Ethereum object not found');
+
+    const provider = new ethers.providers.Web3Provider(ethereum);
+    const signer = provider.getSigner();
+    
+    // TODO: Replace with actual contract ABI and address
+    const contractABI = []; // Your contract ABI
+    const contractAddress = ''; // Your contract address
+    
+    return new ethers.Contract(contractAddress, contractABI, signer);
   };
 
-  const getAllTransactions = async () => {
-    try {
-      if (ethereum) {
-        const landPaymentContract = await createEthereumContract();
-        const availableTransactions = await landPaymentContract.getAllTransactions();
-        const structuredTransactions = availableTransactions.map((transaction: PaymentTransactions) => ({
-          landAddress: transaction.landAddress,
-          sender: transaction.sender,
-          amount: transaction.amount,
-          message: transaction.message,
-          timestamp: new Date(transaction.timestamp.toNumber() * 1000).toLocaleString(),
-        }));
-        console.log(structuredTransactions);
-        setTransactions(structuredTransactions);
-      } else {
-        console.log("Ethereum is not present");
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const checkIfWalletIsConnect = async () => {
-    try {
-      if (!ethereum) return alert("Please install MetaMask.");
-      const accounts = await ethereum.request({ method: "eth_accounts" });
-      if (accounts.length) {
-        setCurrentAccount(accounts[0]);
-        getAllTransactions();
-      } else {
-        console.log("No accounts found");
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const checkIfTransactionsExists = async () => {
-    try {
-      if (ethereum) {
-        const landPaymentContract = await createEthereumContract();
-        const currentTransactionCount = await landPaymentContract.getTransactionCount();
-        window.localStorage.setItem("transactionCount", currentTransactionCount);
-      }
-    } catch (error) {
-      console.log(error);
-      throw new Error("No ethereum object");
-    }
-  };
-
+  // Wallet Connection
   const connectWallet = async () => {
     try {
-      if (!ethereum) return alert("Please install MetaMask.");
-      const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+      const { ethereum } = window;
+      if (!ethereum) {
+        alert('Please install MetaMask!');
+        return;
+      }
+
+      const accounts = await ethereum.request({
+        method: 'eth_requestAccounts',
+      });
+
       setCurrentAccount(accounts[0]);
       window.location.reload();
     } catch (error) {
-      console.log(error);
-      throw new Error("No ethereum object");
+      console.error(error);
+      throw new Error('No ethereum object');
     }
   };
 
-  const sendTransaction = async (transactionData: PaymentTransactions) => {
+  // Land Registration
+  const registerLand = async (landDetails: LandDetails): Promise<string> => {
+    try {
+      setIsLoading(true);
+      const contract = await createEthereumContract();
+
+      const tx = await contract.registerLand(
+        landDetails.landLocation,
+        landDetails.landSize,
+        ethers.utils.parseEther(landDetails.landPrice.toString()),
+        landDetails.geohash || ''
+      );
+
+      await tx.wait();
+      setIsLoading(false);
+      await getAllLands(); // Refresh land registry
+      return tx.hash;
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Land registration error:', error);
+      throw error;
+    }
+  };
+
+  // Land Transfer
+  const transferLand = async (landId: number, newOwner: string): Promise<string> => {
+    try {
+      setIsLoading(true);
+      const contract = await createEthereumContract();
+
+      const tx = await contract.transferLand(landId, newOwner);
+      await tx.wait();
+      setIsLoading(false);
+      await getAllLands(); // Refresh land registry
+      return tx.hash;
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Land transfer error:', error);
+      throw error;
+    }
+  };
+
+  // Update Land Price
+  const updateLandPrice = async (landId: number, newPrice: number): Promise<string> => {
+    try {
+      setIsLoading(true);
+      const contract = await createEthereumContract();
+
+      const tx = await contract.updateLandPrice(
+        landId, 
+        ethers.utils.parseEther(newPrice.toString())
+      );
+      await tx.wait();
+      setIsLoading(false);
+      await getAllLands(); // Refresh land registry
+      return tx.hash;
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Price update error:', error);
+      throw error;
+    }
+  };
+
+  // Buy Land
+  const buyLand = async (landId: number, price: number): Promise<string> => {
+    try {
+      setIsLoading(true);
+      const contract = await createEthereumContract();
+
+      const tx = await contract.buyLand(landId, {
+        value: ethers.utils.parseEther(price.toString())
+      });
+      await tx.wait();
+      setIsLoading(false);
+      await getAllLands(); // Refresh land registry
+      return tx.hash;
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Land purchase error:', error);
+      throw error;
+    }
+  };
+
+  // Deregister Land
+  const deregisterLand = async (landId: number, reason: string): Promise<string> => {
+    try {
+      setIsLoading(true);
+      const contract = await createEthereumContract();
+
+      const tx = await contract.deregisterLand(landId, reason);
+      await tx.wait();
+      setIsLoading(false);
+      await getAllLands(); // Refresh land registry
+      return tx.hash;
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Land deregistration error:', error);
+      throw error;
+    }
+  };
+
+  // Get Land Details
+  const getLandDetails = async (landId: number): Promise<LandDetails> => {
+    try {
+      const contract = await createEthereumContract();
+      const details = await contract.getLandDetails(landId);
+      
+      return {
+        landId,
+        landOwner: details.owner,
+        landLocation: details.location,
+        landSize: details.size.toNumber(),
+        landPrice: parseFloat(ethers.utils.formatEther(details.price)),
+        geohash: details.geohash,
+        isActive: details.isActive
+      };
+    } catch (error) {
+      console.error('Get land details error:', error);
+      throw error;
+    }
+  };
+
+  // Get All Lands
+  const getAllLands = async (): Promise<LandDetails[]> => {
+    try {
+      const contract = await createEthereumContract();
+      const landCount = await contract.getLandCount();
+      
+      const lands: LandDetails[] = [];
+      for (let i = 1; i <= landCount; i++) {
+        const land = await getLandDetails(i);
+        lands.push(land);
+      }
+      
+      setLandRegistry(lands);
+      return lands;
+    } catch (error) {
+      console.error('Get all lands error:', error);
+      throw error;
+    }
+  };
+
+  // Get Land Price History
+  const getLandPriceHistory = async (landId: number): Promise<PriceRecord[]> => {
+    try {
+      const contract = await createEthereumContract();
+      const history = await contract.getLandPriceHistory(landId);
+      
+      const formattedHistory: PriceRecord[] = history.map((record: any) => ({
+        price: parseFloat(ethers.utils.formatEther(record.price)),
+        timestamp: record.timestamp.toNumber(),
+        recorder: record.recorder
+      }));
+      
+      setLandPriceHistory(formattedHistory);
+      return formattedHistory;
+    } catch (error) {
+      console.error('Get land price history error:', error);
+      throw error;
+    }
+  };
+
+  // Get Royalty Balance
+  const getRoyaltyBalance = async (): Promise<number> => {
+    try {
+      if (!currentAccount) throw new Error('No account connected');
+      
+      const contract = await createEthereumContract();
+      const balance = await contract.getRoyaltyBalance(currentAccount);
+      
+      const balanceInEther = parseFloat(ethers.utils.formatEther(balance));
+      setRoyaltyBalance(balanceInEther);
+      return balanceInEther;
+    } catch (error) {
+      console.error('Get royalty balance error:', error);
+      throw error;
+    }
+  };
+
+  // Claim Royalties
+  const claimRoyalties = async (): Promise<string> => {
+    try {
+      setIsLoading(true);
+      const contract = await createEthereumContract();
+      
+      const tx = await contract.claimRoyalties();
+      await tx.wait();
+      
+      // Refresh royalty balance
+      await getRoyaltyBalance();
+      
+      setIsLoading(false);
+      return tx.hash;
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Claim royalties error:', error);
+      throw error;
+    }
+  };
+
+  // Initialize Wallet Connection
+  useEffect(() => {
+    const checkWalletConnection = async () => {
       try {
-        if (ethereum) {
-          const { address, amount, comment, receipient } = transactionData;
-          const transactionsContract = await createEthereumContract();
-          const parsedAmount = ethers.utils.parseEther(amount.toString());
-          // If this is a payment transaction, calculate the total amount to send
-          let totalAmount;
-          const isPayment = true; // assuming this is always true for payment transactions
-          if (isPayment) {
-            const paymentAmount = await transactionsContract.payfee(amount.toString());
-            totalAmount = parsedAmount.add(paymentAmount);
-          } else {
-            totalAmount = parsedAmount;
-          }
-          // Send the transaction to the blockchain
-          await ethereum.request({
-            method: "eth_sendTransaction",
-            params: [
-              {
-                from: currentAccount,
-                to: address,
-                gas: "0x5208",
-                value: ethers.utils.formatEther(totalAmount),
-              },
-            ],
-          });
-          // If this is a payment transaction, listen for payment event and update state
-          if (isPayment) {
-            const filter = transactionsContract.filters.payfeeevent(address, amount.toString());
-            const results = await transactionsContract.queryFilter(filter);
-            console.log("Payment event results:", results);
-          } else {
-            // Add the transaction to the blockchain using the addToBlockchain method
-            const transactionHash = await transactionsContract.addToBlockchain(
-              address,
-              parsedAmount,
-              comment,
-              "" // assuming keyword is not required
-            );
-            console.log(`Loading - ${transactionHash.hash}`);
-            await transactionHash.wait();
-            console.log(`Success - ${transactionHash.hash}`);
-          }
-          // Update transaction count
-          const transactionsCount = await transactionsContract.getTransactionCount();
-          setTransactionCount(transactionsCount.toNumber());
-        } else {
-          console.log("No ethereum object");
+        const { ethereum } = window;
+        if (!ethereum) return;
+
+        const accounts = await ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length) {
+          setCurrentAccount(accounts[0]);
+          await getAllLands();
         }
       } catch (error) {
-        console.log(error);
-        throw new Error("No ethereum object");
+        console.error(error);
       }
     };
-    
 
-  useEffect(() => {
-    checkIfWalletIsConnect();
-    checkIfTransactionsExists();
-  }, [transactionCount]);
+    checkWalletConnection();
+  }, []);
 
-  return {
-    transactionCount,
-    connectWallet,
-    transactions,
+  // Context Value
+  const contextValue: LandOwnershipContextType = {
     currentAccount,
+    connectWallet,
+    registerLand,
+    transferLand,
+    updateLandPrice,
+    buyLand,
+    deregisterLand,
+    getLandDetails,
+    getAllLands,
+    getLandPriceHistory,
+    getRoyaltyBalance,
+    claimRoyalties,
+    landRegistry,
+    landPriceHistory,
+    royaltyBalance,
     isLoading,
-    sendTransaction,
-    handleChange,
-    formData,
-  }
-}
+    transactions
+  };
 
-export default useLandPaymentContext;
+  return (
+    <LandOwnershipContext.Provider value={contextValue}>
+      {children}
+    </LandOwnershipContext.Provider>
+  );
+};
+
+// Custom Hook for using the context
+export const useLandOwnership = () => {
+  const context = useContext(LandOwnershipContext);
+  if (context === undefined) {
+    throw new Error('useLandOwnership must be used within a LandOwnershipProvider');
+  }
+  return context;
+};
+
+export default LandOwnershipProvider;

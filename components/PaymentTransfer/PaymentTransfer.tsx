@@ -1,63 +1,56 @@
-import { chakra, Heading , Stack} from "@chakra-ui/react";
-
-import { ethers } from 'ethers'
-const hre = require("hardhat")
-import { Button, ButtonProps, Flex, useDisclosure, AlertDialog,Alert,  AlertDialogBody,  AlertDialogCloseButton,  AlertDialogContent,
-  AlertDialogFooter,  AlertDialogHeader,  AlertDialogOverlay,   UseDisclosureReturn, Select,FormErrorMessage, FormControl, FormLabel,
-  NumberInput,NumberInputField, NumberIncrementStepper,NumberDecrementStepper,NumberInputStepper, Input,IconButton, AlertIcon, Grid,
-    Box,  Text,  InputGroup,  InputRightAddon, FormHelperText,Wrap,  WrapItem, VisuallyHidden, VisuallyHiddenInput, Accordion,AccordionItem,AccordionButton,
-    AccordionPanel, AccordionIcon } from '@chakra-ui/react'
-    import { useRouter } from 'next/router'
-import { ComponentType, FC, useContext } from 'react'
-import { RiArrowDownSLine } from 'react-icons/ri';
+import { chakra, Heading, Stack, Button, ButtonProps, Flex, useDisclosure, AlertDialog, Alert, AlertDialogBody, AlertDialogCloseButton, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogOverlay, UseDisclosureReturn, Select, FormErrorMessage, FormControl, FormLabel, NumberInput, NumberInputField, NumberIncrementStepper, NumberDecrementStepper, NumberInputStepper, Input, IconButton, AlertIcon, Grid, Box, Text, InputGroup, InputRightAddon, FormHelperText, Wrap, WrapItem, VisuallyHidden, VisuallyHiddenInput, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon } from '@chakra-ui/react';
+import { ethers } from 'ethers';
+import { useRouter } from 'next/router';
+import { FC, useContext } from 'react';
+import { RiArrowDownSLine, RiHeart2Fill } from 'react-icons/ri';
 import { BsShieldFillCheck } from "react-icons/bs";
 import { BiSearchAlt } from "react-icons/bi";
-import {  createSwapFormSchema, createSwapTransferFormSchema,  } from '../../validation'
-
-import { RiHeart2Fill } from "react-icons/ri";
-import { PlusSmIcon, MinusSmIcon } from '@heroicons/react/outline'
-import { useFormContext, useFieldArray ,useForm, Controller} from 'react-hook-form'
-import { CreateSwapTransferInput, CreateTransferInput, SimpleTokenList } from 'types'
-import supportedNetworkOptions from 'constants/supportedNetworkOptions'
-//STORES
-import { useSwapStore  } from 'stores/ContextStores/walletStore'
-import { useEthersStore  } from 'stores/ethersStore'
-import { useSafeStore  } from 'stores/safeStore'
-import { useTransactionStore } from 'stores/transactionStore';
-import { useUserStore  } from 'stores/userStore'
-import {TransactionDisplayProps} from 'types/ethers'
-import { Receipients  } from 'types/index'
-
-
-
-//HOOKS
-import  useEthers   from 'hooks/useEthers'
-import  useFetch   from 'hooks/useFetch'
-import  useLoadSafe   from 'hooks/useLoadSafe'
-
-
-import useTransactions   from 'hooks/useTokenTransactions'
-
-import getSafeInfo from 'hooks/useLoadSafe'
-//Context 
-import  useCrowdsourceContext   from 'context/useCrowdsourceContext'
-import  useDaoContext   from 'context/useDaoContext'
-import  useSwapContext   from 'context/useSwapContext'
-import  useTransactionContext   from 'context/useTransactionContext'
-import useTransferContext   from 'context/usegetAllTransactionsContext'
+import { PlusSmIcon, MinusSmIcon } from '@heroicons/react/outline';
+import { useFormContext, useFieldArray, useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from "yup";
-
-
-import React,{ useCallback, useState, useEffect } from 'react' 
+import React, { useCallback, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import Router from 'next/router'
-import { useQuery } from 'react-query'
+import Router from 'next/router';
+import { useQuery } from 'react-query';
+
+
+// Constants
+
+// Services
 import queries from "services/queries";
+
+// Types
+import { CreateSwapTransferInput, CreateTransferInput, SimpleTokenList, Receipients } from 'types/index';
+import { TransactionDisplayProps } from '@/types/ethers';
+
+// Constants
+import supportedNetworkOptions from '@/constants/supportedNetworkOptions';
+
+
+// Stores
+import { WalletStore } from 'stores/ContextStores/walletStore';
+import { useEthersStore } from 'stores/ethersStore';
+import { useSafeStore } from 'stores/safeStore';
+import { useTransactionStore } from 'stores/transactionStore';
+import { useUserStore } from 'stores/userStore';
+
+// Hooks
+import useEthers from 'hooks/useEthers';
+import useFetch from 'hooks/useFetch';
+import useLoadSafe from 'hooks/useLoadSafe';
+import useTransactions from 'hooks/useTokenTransactions';
+
+// Contexts
+import useCrowdsourceContext from 'contexts/useCrowdsourceContext';
+import useDaoContext from 'contexts/useDaoContext';
+import useSwapContext from 'contexts/useSwapContext';
+import useTransactionContext from 'contexts/useTransactionContext';
+import useTransferContext from 'contexts/usegetAllTransactionsContext';
+
 
 
 // For finally making execution on the blockchain 
-
 
 
 interface PaymentTransferProps  {
