@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, useDisclosure } from '@chakra-ui/react';
 import useDaoContext from '../contexts/useDaoContext';
-import { useLoadSafe } from '../hooks/useLoadSafe';
+import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
 import useSafeDetailsAndSetup from '../hooks/useSafeDetails.ts';
 import useTransactionContext from '../contexts/useTransactionContext';
 import { PaymentTransactions } from 'types';

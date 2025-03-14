@@ -38,7 +38,7 @@ import { useUserStore } from 'stores/userStore';
 // Hooks
 import useEthers from 'hooks/useEthers';
 import useFetch from 'hooks/useFetch';
-import useLoadSafe from 'hooks/useLoadSafe';
+import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
 import useTransactions from 'hooks/useTokenTransactions';
 
 // Contexts

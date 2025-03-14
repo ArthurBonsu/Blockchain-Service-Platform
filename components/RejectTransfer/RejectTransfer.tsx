@@ -1,6 +1,6 @@
 import { Button, ButtonProps, useDisclosure } from '@chakra-ui/react';
 import AppAlertDialog from '@components/AppAlertDialog';
-import useLoadSafe from 'hooks/useLoadSafe';
+import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
 import React, { FC, useEffect,  useCallback, useState, useContext } from 'react';
 import { PaymentTransactions } from "types";
 

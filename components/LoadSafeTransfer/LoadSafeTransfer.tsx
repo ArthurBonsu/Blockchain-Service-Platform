@@ -1,7 +1,7 @@
 import { Button, ButtonProps, Flex, useDisclosure } from '@chakra-ui/react';
 import AppModal from '@components/AppModal';
 
-import useLoadSafe from '../../hooks/useLoadSafe';
+import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
 import React, { useEffect, useState , useContext} from "react";
 interface ExecuteTransferProps {
   colorScheme?: string;

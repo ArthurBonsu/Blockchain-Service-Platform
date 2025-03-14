@@ -1,7 +1,7 @@
 import { FC, useState } from 'react';
 import { useEthersStore } from 'stores/ethersStore';
 import { useSafeStore } from 'stores/safeStore';
-import { useLoadSafe } from 'hooks/useLoadSafe';
+import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
 import { PaymentTransactions } from 'types';
 import { Button, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, FormControl, FormLabel, Input, NumberInput, NumberInputField, FormErrorMessage, Stack } from '@chakra-ui/react';
 import { useForm } from 'react-hook-form';

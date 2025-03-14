@@ -23,7 +23,7 @@ import LoadSafeTransfer from '@/components/LoadSafeTransfer/LoadSafeTransfer';
 // Import Safe-related hooks and stores
 import { useSafeStore } from '@/stores/safeStore';
 import { useEthersStore } from '@/stores/ethersStore';
-import useLoadSafe from '@/hooks/useLoadSafe';
+import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
 
 // Dynamically import or create a fallback for SafeDetailsHook
 const useSafeDetailsAndSetup = () => {

@@ -2,7 +2,7 @@ import { FC ,useContext} from 'react';
 import { useRouter } from 'next/router';
 import { PaymentTransactions } from 'types';
 import { Box, Button, Flex, Heading, List, ListItem, Text, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, ModalFooter } from '@chakra-ui/react';
-import { useLoadSafe } from 'hooks/useLoadSafe';
+import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
 import { useTransactionStore } from 'stores/transactionStore';
 import { useEthersStore } from 'stores/ethersStore';
 import { useSafeStore } from 'stores/safeStore';

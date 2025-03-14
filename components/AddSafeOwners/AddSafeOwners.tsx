@@ -1,7 +1,7 @@
 import { FC, useState, useCallback, useEffect } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { useLoadSafe } from '../../hooks/useLoadSafe';
-import useSafeDetailsAndSetup from 'hooks/useSafeDetails.ts';
+import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
+
 import { useRouter } from 'next/router';
 import { SafecontractAddress } from 'constants/constants';
 import { useUserStore } from 'stores/userStore';

@@ -15,8 +15,8 @@ import  useEthers   from 'hooks/useEthers'
 import  useFetch   from 'hooks/useFetch'
 
 import useTransactions   from 'hooks/useTokenTransactions'
+import { useLoadSafe, useSafeDetailsAndSetup,getSafeInfo } from '../../context/useLoadContext';
 
-import getSafeInfo from 'hooks/useLoadSafe'
 //Context 
 import  useCrowdsourceContext   from 'context/useCrowdsourceContext'
 import  useDaoContext   from 'context/useDaoContext'

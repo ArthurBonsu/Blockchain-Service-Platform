@@ -1,32 +1,30 @@
-
-import {InputGroup,  Text,Input, InputRightAddon,  Heading , Image , Stack} from "@chakra-ui/react";
-import { FC, useEffect,  useCallback, useState, useContext } from 'react'
+import React, { FC, useState, useEffect } from 'react';
+import { 
+  InputGroup, Text, Input, InputRightAddon, Heading, Image, Stack, 
+  Button, Flex, Modal, ModalOverlay, ModalContent, ModalHeader, 
+  ModalCloseButton, ModalBody, ModalFooter 
+} from "@chakra-ui/react";
+import { useRouter } from 'next/router';
 import { shortenAddress } from "../../constants/shortenAddress";
-import dummyData from "../../constants/dummyData"
-//STORES
-import { useSwapStore  } from 'stores/ContextStores/walletStore'
-import { useEthersStore  } from 'stores/ethersStore'
-import { useSafeStore  } from 'stores/safeStore'
+import dummyData from "../../constants/dummyData";
+
+// Stores
+import { useSwapStore } from 'stores/ContextStores/walletStore';
+import { useEthersStore } from 'stores/ethersStore';
+import { useSafeStore } from 'stores/safeStore';
 import { useTransactionStore } from 'stores/transactionStore';
-import { useUserStore  } from 'stores/userStore'
+import { useUserStore } from 'stores/userStore';
 
-//HOOKS
-import  useEthers   from 'hooks/useEthers'
-import  useFetch   from 'hooks/useFetch'
-import  useLoadSafe   from 'hooks/useLoadSafe'
+// Hooks
+import useEthers from 'hooks/useEthers';
+import useFetch from 'hooks/useFetch';
+import { useLoadSafe } from 'hooks/useLoadSafe';
 
+// Contexts
+import useTransferContext from 'context/usegetAllTransactionsContext';
+import { PaymentTransactions } from 'types';
 
-import useTransactions   from 'hooks/useTokenTransactions'
-
-import getSafeInfo from 'hooks/useLoadSafe'
-//Context 
-import  useCrowdsourceContext   from 'context/useCrowdsourceContext'
-import  useDaoContext   from 'context/useDaoContext'
-import  useSwapContext   from 'context/useSwapContext'
-import  useTransactionContext   from 'context/useTransactionContext'
-import useTransferContext   from 'context/usegetAllTransactionsContext'
-
-
+// TransactionsCard Component
 type TransactionsCardProps = {
   addressTo: string;
   addressFrom: string;
@@ -35,10 +33,34 @@ type TransactionsCardProps = {
   keyword: string;
   amount: number;
   url: string;
+  onViewDetails?: (transaction: TransactionsCardProps) => void;
 };
 
-const TransactionsCard: React.FC<TransactionsCardProps> = ({ addressTo, addressFrom, timestamp, message, keyword, amount, url }) => {
+const TransactionsCard: React.FC<TransactionsCardProps> = ({ 
+  addressTo, 
+  addressFrom, 
+  timestamp, 
+  message, 
+  keyword, 
+  amount, 
+  url,
+  onViewDetails 
+}) => {
   const gifUrl = useFetch({ keyword });
+
+  const handleViewDetails = () => {
+    if (onViewDetails) {
+      onViewDetails({
+        addressTo, 
+        addressFrom, 
+        timestamp, 
+        message, 
+        keyword, 
+        amount, 
+        url
+      });
+    }
+  };
 
   return (
     <div className="bg-[#181918] m-4 flex flex-1
@@ -73,49 +95,111 @@ const TransactionsCard: React.FC<TransactionsCardProps> = ({ addressTo, addressF
         <div className="bg-black p-3 px-5 w-max rounded-3xl -mt-5 shadow-2xl">
           <p className="text-[#37c7da] font-bold">{timestamp}</p>
         </div>
+        <Button 
+          colorScheme="blue" 
+          mt={2} 
+          onClick={handleViewDetails}
+        >
+          View Details
+        </Button>
       </div>
     </div>
   );
 };
-const Transaction = () => {
 
-    const { transactions, currentAccount } = useTransferContext();
+// Main Transaction Component
+const Transaction: FC = () => {
+  const router = useRouter();
+  const { transactions, currentAccount } = useTransferContext();
+  const { getSafeInfoUsed } = useLoadSafe();
+   
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionsCardProps | null>(null);
 
+  const handleViewDetails = (transaction: TransactionsCardProps) => {
+    setSelectedTransaction(transaction);
+    setIsModalOpen(true);
+  };
 
-    return (
-        <Stack spacing={6}>
-  
-  <div className="flex w-full justify-center items-center 2xl:px-20 gradient-bg-transactions">
-      <div className="flex flex-col md:p-12 py-12 px-4">
-        {currentAccount ? (
-          <h3 className="text-white text-3xl text-center my-2">
-            Latest Transactions
-          </h3>
-        ) : (
-          <h3 className="text-white text-3xl text-center my-2">
-            Connect your account to see the latest transactions
-          </h3>
-        )}
-          Transaction Details
-        <div className="flex flex-wrap justify-center items-center mt-10">
-          {[...dummyData, ...transactions].reverse().map((transaction, i) => {
-            const transactionWithKeyword: TransactionsCardProps = { 
-              ...transaction, 
-              keyword: transaction.message || 'default', 
-              amount: parseFloat(transaction.amount.toString()), // Convert to string before parsing
-              addressTo: '', // Add the missing properties
-              addressFrom: '',
-              url: '',
-              timestamp: transaction.timestamp.toString() // Convert BigNumber to string
-            };
-            return <TransactionsCard key={i} {...transactionWithKeyword} />
-          })}
+  return (
+    <Stack spacing={6}>
+      <div className="flex w-full justify-center items-center 2xl:px-20 gradient-bg-transactions">
+        <div className="flex flex-col md:p-12 py-12 px-4">
+          {currentAccount ? (
+            <h3 className="text-white text-3xl text-center my-2">
+              Latest Transactions
+            </h3>
+          ) : (
+            <h3 className="text-white text-3xl text-center my-2">
+              Connect your account to see the latest transactions
+            </h3>
+          )}
+          <div className="flex flex-wrap justify-center items-center mt-10">
+            {[...dummyData, ...transactions].reverse().map((transaction, i) => {
+              const transactionWithKeyword: TransactionsCardProps = { 
+                ...transaction, 
+                keyword: transaction.message || 'default', 
+                amount: parseFloat(transaction.amount.toString()), 
+                addressTo: transaction.receipient || '', 
+                addressFrom: transaction.address || '',
+                url: '',
+                timestamp: transaction.timestamp.toString(),
+                onViewDetails: handleViewDetails
+              };
+              return <TransactionsCard key={i} {...transactionWithKeyword} />
+            })}
+          </div>
         </div>
       </div>
-    </div>
-</Stack>
-    )
-}
 
+      {/* Transaction Details Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Transaction Details</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {selectedTransaction && (
+              <>
+                <Text>
+                  <strong>From:</strong> {selectedTransaction.addressFrom}
+                </Text>
+                <Text>
+                  <strong>To:</strong> {selectedTransaction.addressTo}
+                </Text>
+                <Text>
+                  <strong>Amount:</strong> {selectedTransaction.amount} ETH
+                </Text>
+                <Text>
+                  <strong>Timestamp:</strong> {selectedTransaction.timestamp}
+                </Text>
+                {selectedTransaction.message && (
+                  <Text>
+                    <strong>Message:</strong> {selectedTransaction.message}
+                  </Text>
+                )}
+              </>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              colorScheme="blue" 
+              mr={3} 
+              onClick={() => router.push('/')}
+            >
+              Back to Homepage
+            </Button>
+            <Button 
+              colorScheme="red" 
+              onClick={() => setIsModalOpen(false)}
+            >
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </Stack>
+  );
+};
 
 export default Transaction;

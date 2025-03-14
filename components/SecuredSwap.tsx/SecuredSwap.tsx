@@ -8,7 +8,7 @@ import {
   Tooltip
 } from '@chakra-ui/react';
 import AppAlertDialog from '@components/AppAlertDialog';
-import useSafeSdk, { useLoadSafe } from 'hooks/useLoadSafe';
+import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
 import { useSwapContext } from 'contexts/useSwapContext';
 
 interface SecuredSwapProps extends ButtonProps {
