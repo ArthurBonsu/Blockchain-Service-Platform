@@ -10,7 +10,7 @@ import {
   Divider, 
   useToast 
 } from '@chakra-ui/react';
-import { useTokenContext } from 'contexts/TokenContext';
+import { useTokenContext } from '../../contexts/TokenContext';
 import { useEthersStore } from 'stores/ethersStore';
 
 const Energy: React.FC = () => {

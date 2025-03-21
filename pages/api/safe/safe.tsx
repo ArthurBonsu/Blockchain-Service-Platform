@@ -20,19 +20,8 @@ import CreateSafe from '@/components/CreateSafe/CreateSafe';
 import AddSafeOwners from '@/components/AddSafeOwners/AddSafeOwners';
 import LoadSafeTransfer from '@/components/LoadSafeTransfer/LoadSafeTransfer';
 
-// Import Safe-related hooks and stores
-import { useSafeStore } from '@/stores/safeStore';
-import { useEthersStore } from '@/stores/ethersStore';
-import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
-
-// Dynamically import or create a fallback for SafeDetailsHook
-const useSafeDetailsAndSetup = () => {
-  // Placeholder implementation
-  return {
-    getSafeInfoUsed: async () => ({}),
-    getSafeOwners: async () => []
-  };
-};
+// Import SafeContext
+import { useSafeContext } from '@/contexts/useSafeContext';
 
 // Fallback components for SafeAssets and SafeTransfers
 const SafeAssets: React.FC<{ safeAddress: string }> = ({ safeAddress }) => (
@@ -53,25 +42,17 @@ const SafePage: NextPage = () => {
   const router = useRouter();
   const toast = useToast();
 
-  // Safe Store and Ethers Store
+  // Use SafeContext for comprehensive safe management
   const { 
     safeAddress, 
     ownersAddress, 
     isPendingSafeCreation, 
-    pendingSafeData 
-  } = useSafeStore();
-  const userAddress = useEthersStore((state) => state.address);
-
-  // Safe Hooks
-  const { 
-    userAddToSafe 
-  } = useLoadSafe({ safeAddress, userAddress });
-
-  // Fallback safe details hooks
-  const { 
-    getSafeInfoUsed, 
-    getSafeOwners 
-  } = useSafeDetailsAndSetup();
+    pendingSafeData,
+    getSafeInfoUsed,
+    getSafeOwners,
+    userAddToSafe,
+    currentAccount
+  } = useSafeContext();
 
   // State with explicit typing
   const [safeInfo, setSafeInfo] = useState<SafeInfo | null>(null);
@@ -94,7 +75,7 @@ const SafePage: NextPage = () => {
 
       setIsLoading(true);
       try {
-        const info = await getSafeInfoUsed({ safeAddress });
+        const info = await getSafeInfoUsed();
         setSafeInfo(info);
 
         const owners = await getSafeOwners({ safeAddress });
@@ -118,7 +99,7 @@ const SafePage: NextPage = () => {
   // Auto-add user to Safe
   useEffect(() => {
     const addUserToSafe = async () => {
-      if (safeAddress && userAddress && !currentOwners.includes(userAddress)) {
+      if (safeAddress && currentAccount && !currentOwners.includes(currentAccount)) {
         try {
           await userAddToSafe();
           toast({
@@ -140,7 +121,7 @@ const SafePage: NextPage = () => {
     };
 
     addUserToSafe();
-  }, [safeAddress, userAddress, currentOwners, userAddToSafe, toast]);
+  }, [safeAddress, currentAccount, currentOwners, userAddToSafe, toast]);
 
   return (
     <Box p={6} maxWidth="container.xl" margin="auto">

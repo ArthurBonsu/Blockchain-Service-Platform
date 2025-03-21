@@ -1,33 +1,20 @@
-import { Heading , Stack} from "@chakra-ui/react";
+import React from 'react';
 import { BsShieldFillCheck } from "react-icons/bs";
 import { BiSearchAlt } from "react-icons/bi";
 import { RiHeart2Fill } from "react-icons/ri";
 
-//STORES
-import { useSwapStore  } from 'stores/ContextStores/walletStore'
-import { useEthersStore  } from 'stores/ethersStore'
-import { useSafeStore  } from 'stores/safeStore'
-import { useTransactionStore } from 'stores/transactionStore';
-import { useUserStore  } from 'stores/userStore'
+// Import SafeContext (if needed for future integration)
+import { useSafeContext } from '../../contexts/useSafeContext';
 
-//HOOKS
-import  useEthers   from 'hooks/useEthers'
-import  useFetch   from 'hooks/useFetch'
+// Service Card Component
+interface ServiceCardProps {
+  color: string;
+  title: string;
+  icon: React.ReactNode;
+  subtitle: string;
+}
 
-import useTransactions   from 'hooks/useTokenTransactions'
-import { useLoadSafe, useSafeDetailsAndSetup,getSafeInfo } from '../../context/useLoadContext';
-
-//Context 
-import  useCrowdsourceContext   from 'context/useCrowdsourceContext'
-import  useDaoContext   from 'context/useDaoContext'
-import  useSwapContext   from 'context/useSwapContext'
-import  useTransactionContext   from 'context/useTransactionContext'
-import useTransferContext   from 'context/usegetAllTransactionsContext'
-import {ServiceProps} from 'types/ethers'
-import React, { FC, useEffect,  useCallback, useState, useContext } from 'react';
-
-
-const ServiceCard: React.FC<ServiceProps> = ({ color, title, icon , subtitle }) => (
+const ServiceCard: React.FC<ServiceCardProps> = ({ color, title, icon, subtitle }) => (
   <div className="flex flex-row justify-start items-start white-glassmorphism p-3 m-2 cursor-pointer hover:shadow-xl">
     <div className={`w-10 h-10 rounded-full flex justify-center items-center ${color}`}>
       {icon}
@@ -40,20 +27,17 @@ const ServiceCard: React.FC<ServiceProps> = ({ color, title, icon , subtitle }) 
     </div>
   </div>
 );
-const Services: React.FC<ServiceProps> = ({
 
-  color,
-  title,
-  icon
+// Services Component
+const Services: React.FC = () => {
+  // Optional: Add SafeContext if needed for any future functionality
+  const safeContext = useSafeContext();
 
-  }) => {
-
-
-    return (
-      <div className="flex w-full justify-center items-center gradient-bg-services">
+  return (
+    <div className="flex w-full justify-center items-center gradient-bg-services">
       <div className="flex mf:flex-row flex-col items-center justify-between md:p-20 py-12 px-4">
         <div className="flex-1 flex flex-col justify-start items-start">
-          <h1 className="text-white text-3xl sm:text-5xl py-2 text-gradient ">
+          <h1 className="text-white text-3xl sm:text-5xl py-2 text-gradient">
             Services that we
             <br />
             continue to improve
@@ -65,31 +49,28 @@ const Services: React.FC<ServiceProps> = ({
         </div>
   
         <div className="flex-1 flex flex-col justify-start items-center">
-          <Services
+          <ServiceCard
             color="bg-[#2952E3]"
-            title="Security gurantee"
+            title="Security guarantee"
             icon={<BsShieldFillCheck fontSize={21} className="text-white" />}
-            subtitle="Security is guranteed. We always maintain privacy and maintain the quality of our products"
+            subtitle="Security is guaranteed. We always maintain privacy and maintain the quality of our products"
           />
-          <Services
+          <ServiceCard
             color="bg-[#8945F8]"
             title="Best exchange rates"
             icon={<BiSearchAlt fontSize={21} className="text-white" />}
-            subtitle="Security is guranteed. We always maintain privacy and maintain the quality of our products"
+            subtitle="Competitive rates with transparent pricing and minimal fees"
           />
-          <Services
+          <ServiceCard
             color="bg-[#F84550]"
             title="Fastest transactions"
             icon={<RiHeart2Fill fontSize={21} className="text-white" />}
-            subtitle="Security is guranteed. We always maintain privacy and maintain the quality of our products"
+            subtitle="Lightning-fast transactions with our optimized blockchain infrastructure"
           />
         </div>
       </div>
     </div>
-  
-);
-
-
-}
+  );
+};
 
 export default Services;

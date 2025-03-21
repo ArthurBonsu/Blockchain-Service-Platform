@@ -1,181 +1,131 @@
-import { chakra, Heading, Stack, Button, ButtonProps, Flex, useDisclosure, AlertDialog, Alert, AlertDialogBody, AlertDialogCloseButton, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogOverlay, UseDisclosureReturn, Select, FormErrorMessage, FormControl, FormLabel, NumberInput, NumberInputField, NumberIncrementStepper, NumberDecrementStepper, NumberInputStepper, Input, IconButton, AlertIcon, Grid, Box, Text, InputGroup, InputRightAddon, FormHelperText, Wrap, WrapItem, VisuallyHidden, VisuallyHiddenInput, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon } from '@chakra-ui/react';
-import { ethers } from 'ethers';
+import { 
+  chakra, Heading, Stack, Button, Flex, useDisclosure, Box, 
+  Text, FormControl, FormLabel, Input, InputGroup, 
+  InputRightAddon, Grid
+} from '@chakra-ui/react';
 import { useRouter } from 'next/router';
-import { FC, useContext } from 'react';
-import { RiArrowDownSLine, RiHeart2Fill } from 'react-icons/ri';
-import { BsShieldFillCheck } from "react-icons/bs";
-import { BiSearchAlt } from "react-icons/bi";
-import { PlusSmIcon, MinusSmIcon } from '@heroicons/react/outline';
-import { useFormContext, useFieldArray, useForm, Controller } from 'react-hook-form';
+import { FC, useState, useEffect } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from "yup";
-import React, { useCallback, useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import Router from 'next/router';
-import { useQuery } from 'react-query';
-
-
-// Constants
-
-// Services
-import queries from "services/queries";
-
-// Types
-import { CreateSwapTransferInput, CreateTransferInput, SimpleTokenList, Receipients } from 'types/index';
+import React from 'react';
+import useTransactionContext from 'contexts/useTransactionContext';
 import { TransactionDisplayProps } from '@/types/ethers';
 
-// Constants
-import supportedNetworkOptions from '@/constants/supportedNetworkOptions';
-
-
-// Stores
-import { WalletStore } from 'stores/ContextStores/walletStore';
-import { useEthersStore } from 'stores/ethersStore';
-import { useSafeStore } from 'stores/safeStore';
-import { useTransactionStore } from 'stores/transactionStore';
-import { useUserStore } from 'stores/userStore';
-
-// Hooks
-import useEthers from 'hooks/useEthers';
-import useFetch from 'hooks/useFetch';
-import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
-import useTransactions from 'hooks/useTokenTransactions';
-
-// Contexts
-import useCrowdsourceContext from 'contexts/useCrowdsourceContext';
-import useDaoContext from 'contexts/useDaoContext';
-import useSwapContext from 'contexts/useSwapContext';
-import useTransactionContext from 'contexts/useTransactionContext';
-import useTransferContext from 'contexts/usegetAllTransactionsContext';
-
-
-
-// For finally making execution on the blockchain 
-
-
-interface PaymentTransferProps  {
-  username: string , 
-  address:string, 
-  amount:number , 
-  comment:string ,
-  timestamp?:Date, 
-  receipient:string
-  receipients:Array<string>,
-  txhash?:string , 
-  USDprice:number,
-  paymenthash: string,
-  owneraddress: string , 
-  onPayTransfer: ()=> void
+interface PaymentTransferProps {
+  username: string; 
+  address: string; 
+  amount: number; 
+  comment: string;
+  timestamp?: Date; 
+  receipient: string;
+  receipients: Array<string>;
+  txhash?: string; 
+  USDprice: number;
+  paymenthash: string;
+  owneraddress: string; 
+  onPayTransfer: () => void;
 }
 
-const pathname = "../SimpleTransfer";
+const pathname = "/SimpleTransfer";
 
-const TransactionDisplay: React.FC<TransactionDisplayProps> = ({ account, username, paymenthash, receipients , contractowneraddress,  amount, usdPrice  }) => {
+// Transaction Display Component
+const TransactionDisplay: React.FC<TransactionDisplayProps> = ({ 
+  account, 
+  username, 
+  paymenthash, 
+  receipients, 
+  contractowneraddress, 
+  amount, 
+  usdPrice 
+}) => {
   return (
-<Stack spacing={6}>
-    <Box maxW='sm' borderWidth='1px' borderRadius='lg' overflow='hidden'>
-    <Heading as='h1' size='4xl' noOfLines={1}> View Payment Transaction of User : {account} From Here     </Heading>
-   <br>
-  <Text as='b'> Username</Text>
-  <Text as='b'>{username}</Text>
-  </br>
-
-  <br>
-  <Text as='b'> Payment Hash</Text>
-  <Text as='b'>{paymenthash}</Text>
-  </br>
-
-
-  {receipients.map((item ,index) =>{
-
-<>
-    <Text as='b'> Receipient:  {index} </Text>
-   <Text as='b'>First Token </Text>
- </>
-   return item; } )
-
-}
-   <br>
-  <Text as='b'> Owner Address  </Text>
-  <Text as='b'>{contractowneraddress} </Text>
-  </br>
- 
-  <>
-  <Text as='b'>Amount of Tokens </Text>
-  <Text as='b'>{amount} </Text>
-  </>
-  
-  <>
-  <Text as='b'>Price </Text>
-  <Text as='b'>{usdPrice} </Text>
-  </>
-</Box>
+    <Stack spacing={6}>
+      <Box maxW='sm' borderWidth='1px' borderRadius='lg' overflow='hidden' p={4}>
+        <Heading as='h1' size='lg' mb={4}>
+          View Payment Transaction
+        </Heading>
+        
+        <Stack spacing={3}>
+          <Flex justify="space-between">
+            <Text fontWeight="bold">User:</Text>
+            <Text>{account}</Text>
+          </Flex>
+          
+          <Flex justify="space-between">
+            <Text fontWeight="bold">Username:</Text>
+            <Text>{username}</Text>
+          </Flex>
+          
+          <Flex justify="space-between">
+            <Text fontWeight="bold">Payment Hash:</Text>
+            <Text>{paymenthash}</Text>
+          </Flex>
+          
+          <Box>
+            <Text fontWeight="bold" mb={2}>Recipients:</Text>
+            {receipients.map((item, index) => (
+              <Text key={index} pl={4}>
+                Recipient {index + 1}: {item}
+              </Text>
+            ))}
+          </Box>
+          
+          <Flex justify="space-between">
+            <Text fontWeight="bold">Owner Address:</Text>
+            <Text>{contractowneraddress}</Text>
+          </Flex>
+          
+          <Flex justify="space-between">
+            <Text fontWeight="bold">Amount of Tokens:</Text>
+            <Text>{amount}</Text>
+          </Flex>
+          
+          <Flex justify="space-between">
+            <Text fontWeight="bold">Price:</Text>
+            <Text>{usdPrice}</Text>
+          </Flex>
+        </Stack>
+      </Box>
     </Stack>
-  )
- 
-}
+  );
+};
 
+// Main Payment Transfer Component
+const PaymentTransfer: FC<PaymentTransferProps> = ({
+  username, 
+  address, 
+  amount, 
+  comment, 
+  txhash, 
+  USDprice, 
+  onPayTransfer, 
+  ...rest
+}) => {
+  const { 
+    currentAccount,
+    PaymentformData,
+    sendPayment,
+    isPaid
+  } = useTransactionContext();
 
+  const router = useRouter();
+  const [openMultiRecipient, setMultiReceipient] = useState(false);
+  const [paymentcompleted, setPaymentcompleted] = useState(false);
 
-
-   let myreceipient: string;
-// This is for the execution
-const PaymentTransfer = ({
-  username, address,amount, comment,txhash, USDprice,  onPayTransfer, ...rest}:PaymentTransferProps
-) => {
-
-
-
-  const { transferobjectAArray, 
-    fullpaymentx,
-    fulltransfertx,
-     sendPayment ,
-     sendSimpleTransfer,
-     transactionCount,
-     connectWallet,   
-     currentAccount,    
-     sendTransaction,    
-     PaymentformData,
-     transferformData,   
-     paymentTransactionReceipt,
-     transferTransaction,       
-     isPaid,
-     tokenTxReceipt,
-     transferredTokenAmount,
-     paidTokenAmount,
-     ourUSDPrice,
-     accountsProvided,} = useTransactionContext();
-
-    const router = useRouter();
-    const localDisclosure = useDisclosure()
-    const [paymentapproved, setPaymentApproved] = useState(false)
-    const [isLoading, setIsLoading] = useState(false)
-    const [isSwapping, setIsSwapping] = useState(true)
-    const [isTyping, setIsTyping] = useState(true)  
-    const [transaction,setTransaction] = useState('')
-    const [token, setToken] = useState({})
-    const [value, setValue] = useState('')
-    const [_currentAccount, setCurrentAccount] = useState('')
-    const [tokenchosen, setTokenChosen] = useState(false);
-    const [isSubmitted, setIsSubmitted] = useState(false);
-
-
-    const [openMultiRecipient, setMultiReceipient] = useState(false); 
-    const [paymentcompleted,  setPaymentcompleted] = useState(false);
- 
-    const schema = yup.object({
-
-      username: yup.string().required(),
-      address: yup.string().required(), 
-      amount:yup.number().required(),
-      comment: yup.string().required(),
-      timestamp:yup.date().required(),
-      receipient:yup.number().required(),
-      receipients:yup.array().of(yup.string()).required(),
-      txhash:yup.string().required(),
-      USDprice:yup.number().required(),
-      paymenthash:yup.string().required(),
-    
+  // Form validation schema
+  const schema = yup.object({
+    username: yup.string().required(),
+    address: yup.string().required(),
+    amount: yup.number().required(),
+    comment: yup.string().required(),
+    timestamp: yup.date().required(),
+    receipient: yup.string().required(),
+    receipients: yup.array().of(yup.string()).required(),
+    txhash: yup.string(),
+    USDprice: yup.number().required(),
+    paymenthash: yup.string().required(),
+    owneraddress: yup.string().required()
   }).required();
 
   const {
@@ -183,121 +133,179 @@ const PaymentTransfer = ({
     register,
     handleSubmit,
     formState: { isSubmitting },
-  } = useForm<PaymentTransferProps>()
-  const { fields, append, remove} = useFieldArray({
-        
-        name: 'receipients'
-      },
-       
- )
-
+  } = useForm<PaymentTransferProps>({
+    resolver: yupResolver(schema)
+  });
   
- const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    isTyping
-    setValue(event.target.value);
-    !isTyping
-    // Logic of token conversion must be here
-  
-  } 
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'receipients'
+  });
 
+  // Check if payment is completed when component mounts or when isPaid changes
   useEffect(() => {
-    onPayTransfer();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [PaymentformData.username, PaymentformData.contractaddress, PaymentformData.amount]);
+    if (isPaid) {
+      setPaymentcompleted(true);
+    }
+  }, [isPaid]);
 
+  // Update the payment data when it changes
+  useEffect(() => {
+    if (onPayTransfer) {
+      onPayTransfer();
+    }
+  }, [PaymentformData.username, PaymentformData.contractaddress, PaymentformData.amount, onPayTransfer]);
+
+  // Toggle multi-recipient input
   const onMultiReceipientOpen = () => {
     setMultiReceipient(!openMultiRecipient);
-  }
+  };
 
+  // Navigate to SimpleTransfer page
   const onMoveToTransfer = () => {
     router.push(pathname);
-  }
+  };
+
+  // Handle form submission
+  const onSubmitPayment = async (data: PaymentTransferProps) => {
+    try {
+      // Send payment
+      await sendPayment(data);
+      setPaymentcompleted(true);
+    } catch (error) {
+      console.error("Payment failed:", error);
+    }
+  };
 
   return (
-    <Grid placeItems="center" w="full" h="100vh">
+    <Grid placeItems="center" w="full" minH="100vh">
       <Box w="500px" shadow="md" p="10" borderRadius="md" bg="gray.50">
-        <Flex justifyContent="space-between" alignItems="center">
-          <Text>The Paymet Transfer Solution</Text>
-          <Button bg="blue.200" _hover={{ bg: 'blue.300' }} textColor="white" onClick={() => {
-            onMultiReceipientOpen();
-            append({})
-          }}>
-            Add Owners
+        <Flex justifyContent="space-between" alignItems="center" mb={4}>
+          <Text fontSize="xl" fontWeight="bold">Payment Transfer Solution</Text>
+          <Button 
+            bg="blue.200" 
+            _hover={{ bg: 'blue.300' }} 
+            textColor="white" 
+            onClick={() => {
+              onMultiReceipientOpen();
+              append({});
+            }}
+          >
+            Add Recipients
           </Button>
         </Flex>
-        <form onSubmit={handleSubmit(() => { onPayTransfer() })}>
-          {Boolean(fields.length === 0) && <Text>Please add owners..</Text>}
+        
+        <form onSubmit={handleSubmit(onSubmitPayment)}>
+          {Boolean(fields.length === 0) && (
+            <Text mb={4}>Please add recipients...</Text>
+          )}
+          
           {fields.map((field, index) => (
-            <InputGroup key={field.id} size="sm">
-              <Input {...register(`receipients.${index}`, { required: true })} mb="5px" bg="white" />
+            <InputGroup key={field.id} size="sm" mb={2}>
+              <Input 
+                {...register(`receipients.${index}`, { required: true })} 
+                placeholder="Recipient address"
+                bg="white" 
+              />
               <InputRightAddon>
-                <Text onClick={() => remove(index)} _hover={{ cursor: 'pointer' }}>
+                <Text 
+                  onClick={() => remove(index)} 
+                  _hover={{ cursor: 'pointer', color: 'red.500' }}
+                >
                   Remove
                 </Text>
               </InputRightAddon>
             </InputGroup>
           ))}
-          <Flex flexDirection="column" mt="20px">
-            <FormControl>
-              <FormLabel htmlFor="amount" fontWeight="normal">
-                Other Relevant Information
-                <Heading as="h2" fontSize="xl" mb={0}>
-                  Make Payment Before Transferring Tokens 
-                  The price is now at : {PaymentformData.USDprice} for 5 tokens
-                </Heading> 
-                <InputGroup>
-                  <Input placeholder='username' {...register("username")} />
-                  <InputRightAddon> </InputRightAddon>
-                  <Input placeholder='address' size='sm' {...register("address")} />
-                  <InputRightAddon> 0x...</InputRightAddon>
-                  <Input placeholder='token amount' {...register("amount")} />
-                  <InputRightAddon> +233</InputRightAddon>
-                  <Input placeholder='comment' {...register("comment")} />
-                  <InputRightAddon> +233</InputRightAddon> 
-                  <Input type="datetime-local" placeholder='Select Date and Time' {...register("timestamp")} />
-                  <InputRightAddon> +233</InputRightAddon>
-                  <Text>  Price of Token To Be Transferred </Text> 
-                </InputGroup>   
+          
+          <Flex flexDirection="column" mt={6}>
+            <FormControl mb={4}>
+              <FormLabel fontWeight="bold">
+                Payment Information
               </FormLabel>
+              <Text mb={2} fontSize="sm">
+                Make Payment Before Transferring Tokens. 
+                The price is now at: {PaymentformData.USDprice || USDprice} for 5 tokens
+              </Text>
+              
+              <Stack spacing={3}>
+                <InputGroup>
+                  <Input placeholder='Username' {...register("username")} bg="white" />
+                </InputGroup>
+                
+                <InputGroup>
+                  <Input placeholder='Address' {...register("address")} bg="white" />
+                  <InputRightAddon>0x...</InputRightAddon>
+                </InputGroup>
+                
+                <InputGroup>
+                  <Input placeholder='Amount of tokens' {...register("amount")} bg="white" />
+                </InputGroup>
+                
+                <InputGroup>
+                  <Input placeholder='Comment' {...register("comment")} bg="white" />
+                </InputGroup>
+                
+                <InputGroup>
+                  <Input 
+                    type="datetime-local" 
+                    placeholder='Select Date and Time' 
+                    {...register("timestamp")} 
+                    bg="white"
+                  />
+                </InputGroup>
+                
+                <InputGroup>
+                  <Input placeholder='Payment Hash' {...register("paymenthash")} bg="white" />
+                </InputGroup>
+                
+                <InputGroup>
+                  <Input placeholder='Owner Address' {...register("owneraddress")} bg="white" />
+                </InputGroup>
+              </Stack>
             </FormControl>
           </Flex>
+          
           <Button
             bg="blue.200"
             _hover={{ bg: 'blue.300' }}
             textColor="white"
             type="submit"
             w="full"
-            mt="20px"
+            mt={4}
             isLoading={isSubmitting}
           >
-            Create Safe
+            Make Payment
           </Button>
-          {paymentcompleted ? 
-  (<Button
-    bg="blue.200"
-    _hover={{ bg: 'blue.300' }}
-    textColor="white"
-    type="submit"
-    w="full"
-    mt="20px"
-    onClick={onMoveToTransfer}
-  >
-    Move to Transfer
-  </Button>) : null
-}
-      </form>
-      <TransactionDisplay 
-        account = {currentAccount}
-        username = {PaymentformData.username || 'Nothing yet'}
-        paymenthash = {PaymentformData.paymenthash || 'Nothing yet'}
-        receipients= {PaymentformData.receipients || ['Nothing yet']}
-        contractowneraddress= {PaymentformData.owneraddress || 'Nothing yet'}
-        amount ={Number(PaymentformData.amount) || 0}
-        usdPrice = {Number(PaymentformData.USDprice) || 0}
-      />
-    </Box>
-  </Grid>
-);
+          
+          {paymentcompleted && (
+            <Button
+              bg="green.400"
+              _hover={{ bg: 'green.500' }}
+              textColor="white"
+              w="full"
+              mt={4}
+              onClick={onMoveToTransfer}
+            >
+              Move to Transfer
+            </Button>
+          )}
+        </form>
+        
+        <Box mt={6}>
+          <TransactionDisplay 
+            account={currentAccount}
+            username={PaymentformData.username || 'Nothing yet'}
+            paymenthash={PaymentformData.paymenthash || 'Nothing yet'}
+            receipients={PaymentformData.receipients || ['Nothing yet']}
+            contractowneraddress={PaymentformData.owneraddress || 'Nothing yet'}
+            amount={Number(PaymentformData.amount) || 0}
+            usdPrice={Number(PaymentformData.USDprice) || 0}
+          />
+        </Box>
+      </Box>
+    </Grid>
+  );
 };
 
 export default PaymentTransfer;

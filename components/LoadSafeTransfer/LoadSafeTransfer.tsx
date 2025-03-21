@@ -1,8 +1,8 @@
 import { Button, ButtonProps, Flex, useDisclosure } from '@chakra-ui/react';
-import AppModal from '@components/AppModal';
+import AppModal from 'components/AppModal';
+import { useSafeContext } from '../../contexts/useSafeContext';
+import React, { useEffect, useState } from "react";
 
-import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
-import React, { useEffect, useState , useContext} from "react";
 interface ExecuteTransferProps {
   colorScheme?: string;
   variant?: string;
@@ -27,29 +27,45 @@ const LoadSafeTransfer: React.FC<ExecuteTransferProps> = ({
   const [isApprovalExecutable, setIsApprovalExecutable] = useState(false);
   const [isRejectionExecutable, setIsRejectionExecutable] = useState(false);
   const localDisclosure = useDisclosure();
-  const { checkIfTxnExecutable, approveTransfer, rejectTransfer } = useLoadSafe({
-    safeAddress: safeTxHash,
-    userAddress: '', // You might need to pass the user address here
-  });
-      // You might need to pass the user address here 
+
+  // Use SafeContext methods
+  const { 
+    checkIfTxnExecutable, 
+    approveTransfer, 
+    rejectTransfer 
+  } = useSafeContext();
+
+  // Check transaction executability
   useEffect(() => {
     const getExecutables = async () => {
-      if (safeTxHash && threshold) {
-        const approvalTx = await checkIfTxnExecutable(safeTxHash);
-        if (approvalTx) {
-          setIsApprovalExecutable(true);
+      try {
+        if (safeTxHash && threshold) {
+          const approvalTx = await checkIfTxnExecutable({
+            safeAddress: safeTxHash,
+            transaction: {} // You might need to pass the full transaction object
+          });
+          if (approvalTx) {
+            setIsApprovalExecutable(true);
+          }
         }
-      }
-      if (safeRejectTxHash) {
-        const rejectionTx = await checkIfTxnExecutable(safeRejectTxHash);
-        if (rejectionTx) {
-          setIsRejectionExecutable(true);
+        
+        if (safeRejectTxHash) {
+          const rejectionTx = await checkIfTxnExecutable({
+            safeAddress: safeRejectTxHash,
+            transaction: {} // You might need to pass the full transaction object
+          });
+          if (rejectionTx) {
+            setIsRejectionExecutable(true);
+          }
         }
+      } catch (error) {
+        console.error('Error checking transaction executability:', error);
       }
     };
+    
     getExecutables();
   }, [checkIfTxnExecutable, safeRejectTxHash, safeTxHash, threshold]);
- // safeTxHash, safeRejectTxHash, threshold , nonce
+
   return (
     <div>
       <Button {...rest} onClick={localDisclosure.onOpen}>
@@ -71,14 +87,20 @@ const LoadSafeTransfer: React.FC<ExecuteTransferProps> = ({
               isLoading={approveExeIsLoading}
               isDisabled={approveExeIsLoading}
               onClick={async () => {
-                setApproveExeIsLoading(true);
-                await approveTransfer({
-                  safeTxHash,
-                  execTxn: true,
-                  hashTxn: hashTxn || '',
-                });
-                setApproveExeIsLoading(false);
-                localDisclosure.onClose();
+                try {
+                  setApproveExeIsLoading(true);
+                  await approveTransfer({
+                    safeAddress: safeTxHash,
+                    transaction: {}, // You might need to pass the full transaction object
+                    execTxn: true,
+                    hashtxn: hashTxn || '',
+                  });
+                } catch (error) {
+                  console.error('Error approving transfer:', error);
+                } finally {
+                  setApproveExeIsLoading(false);
+                  localDisclosure.onClose();
+                }
               }}
             >
               Execute Approval
@@ -89,15 +111,21 @@ const LoadSafeTransfer: React.FC<ExecuteTransferProps> = ({
               isLoading={rejectExeIsLoading}
               isDisabled={rejectExeIsLoading}
               onClick={async () => {
-                setRejectExeIsLoading(true);
-                await rejectTransfer({
-                  safeTxHash: safeRejectTxHash,
-                  execTxn: true,
-                  hashTxn: hashTxn || '',
-                  nonce,
-                });
-                setRejectExeIsLoading(false);
-                localDisclosure.onClose();
+                try {
+                  setRejectExeIsLoading(true);
+                  await rejectTransfer({
+                    safeAddress: safeRejectTxHash,
+                    transaction: {}, // You might need to pass the full transaction object
+                    execTxn: true,
+                    hashtxn: hashTxn || '',
+                    nonce,
+                  });
+                } catch (error) {
+                  console.error('Error rejecting transfer:', error);
+                } finally {
+                  setRejectExeIsLoading(false);
+                  localDisclosure.onClose();
+                }
               }}
             >
               Execute Rejection

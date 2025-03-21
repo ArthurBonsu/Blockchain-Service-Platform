@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, useDisclosure } from '@chakra-ui/react';
-import useDaoContext from '../contexts/useDaoContext';
-import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
-import useSafeDetailsAndSetup from '../hooks/useSafeDetails.ts';
-import useTransactionContext from '../contexts/useTransactionContext';
+import useDaoContext from '../../contexts/useDaoContext';
+import { useSafeContext } from '../../contexts/useSafeContext';
+import useTransactionContext from '../../contexts/useTransactionContext';
 import { PaymentTransactions } from 'types';
-import { useSafeStore } from '../stores/safeStore';
-import { useTransactionStore } from '../stores/transactionStore';
-import { useEthersStore } from '../stores/ethersStore';
+import { useSafeStore } from '../../stores/safeStore';
+import { useTransactionStore } from '../../stores/transactionStore';
+import { useEthersStore } from '../../stores/ethersStore';
 
 const DAO: React.FC<PaymentTransactions> = ({ ...rest }) => {
   // Context hooks
@@ -20,18 +19,19 @@ const DAO: React.FC<PaymentTransactions> = ({ ...rest }) => {
     sendDaoTransaction,
     connectWallet,
     currentAccount,
-    isLoading
+    isLoading: isDaoLoading
   } = useDaoContext();
   
+  // Use SafeContext for additional safe-related methods
   const { 
-    getSafeInfo, 
-    addAddressToSafe, 
-    setUpMultiSigSafeAddress, 
-    isTxnExecutable, 
     proposeTransaction, 
     approveTransfer, 
-    rejectTransfer 
-  } = useSafeDetailsAndSetup();
+    rejectTransfer,
+    setUpMultiSigSafeAddress,
+    addAddressToSafe,
+    getSafeInfo,
+    isLoading: isSafeLoading
+  } = useSafeContext();
   
   const { transferTransaction, sendTransaction } = useTransactionContext();
 
@@ -64,23 +64,16 @@ const DAO: React.FC<PaymentTransactions> = ({ ...rest }) => {
   const address = useEthersStore((state) => state.address);
   const safeAddress = useSafeStore((state) => state.safeAddress);
   const ownersAddress = useSafeStore((state) => state.ownersAddress);
-  const contractAddress = useSafeStore((state) => state.contractAddress);
-  const isPendingSafeCreation = useSafeStore((state) => state.isPendingSafeCreation);
-  const pendingSafeData = useSafeStore((state) => state.pendingSafeData);
-  const isPendingAddOwner = useSafeStore((state) => state.isPendingAddOwner);
-  const pendingAddOwnerData = useSafeStore((state) => state.pendingAddOwnerData);
+  const contractAddress = useSafeStore((state) => state.safeContractAddress);
   const transaction = useTransactionStore((state) => state.transaction);
   const txhash = useTransactionStore((state) => state.txhash);
   const txdata = useTransactionStore((state) => state.txdata);
   const txamount = useTransactionStore((state) => state.txamount);
   const txname = useTransactionStore((state) => state.txname);
-  const isPendingProposal = useTransactionStore((state) => state.isPendingProposal);
-  const pendingProposalData = useTransactionStore((state) => state.pendingProposalData);
 
   // Event handlers
   const handleCreateProposal = async () => {
     if (!proposalTitle || !proposalDescription) return;
-    setIsLoading(true);
     try {
       await createProposal(proposalTitle, proposalDescription);
       createProposalModal.onClose();
@@ -88,35 +81,27 @@ const DAO: React.FC<PaymentTransactions> = ({ ...rest }) => {
       setProposalDescription('');
     } catch (error) {
       console.error("Error creating proposal:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleVoteOnProposal = async () => {
     if (!vote) return;
-    setIsLoading(true);
     try {
       await voteOnProposal(vote);
       voteModal.onClose();
       setVote('');
     } catch (error) {
       console.error("Error voting on proposal:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleExecuteProposal = async () => {
-    setIsLoading(true);
     try {
       const txHash = await executeProposal();
       setExecutionTxHash(txHash);
       executeModal.onClose();
     } catch (error) {
       console.error("Error executing proposal:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -146,7 +131,6 @@ const DAO: React.FC<PaymentTransactions> = ({ ...rest }) => {
 
   const handleSendDaoTransaction = async () => {
     if (!receipient || !amount) return;
-    setIsLoading(true);
     
     try {
       const transactionData = {
@@ -191,8 +175,6 @@ const DAO: React.FC<PaymentTransactions> = ({ ...rest }) => {
       setComment('');
     } catch (error) {
       console.error("Error sending DAO transaction:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -262,7 +244,7 @@ const DAO: React.FC<PaymentTransactions> = ({ ...rest }) => {
             />
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" onClick={handleCreateProposal} isLoading={isLoading}>
+            <Button colorScheme="blue" onClick={handleCreateProposal} isLoading={isDaoLoading || isSafeLoading}>
               Create Proposal
             </Button>
           </ModalFooter>
@@ -284,7 +266,7 @@ const DAO: React.FC<PaymentTransactions> = ({ ...rest }) => {
             />
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" onClick={handleVoteOnProposal} isLoading={isLoading}>
+            <Button colorScheme="blue" onClick={handleVoteOnProposal} isLoading={isDaoLoading || isSafeLoading}>
               Vote
             </Button>
           </ModalFooter>
@@ -301,7 +283,7 @@ const DAO: React.FC<PaymentTransactions> = ({ ...rest }) => {
             {executionTxHash && <p>Execution transaction hash: {executionTxHash}</p>}
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" onClick={handleExecuteProposal} isLoading={isLoading}>
+            <Button colorScheme="blue" onClick={handleExecuteProposal} isLoading={isDaoLoading || isSafeLoading}>
               Execute
             </Button>
           </ModalFooter>
@@ -318,7 +300,7 @@ const DAO: React.FC<PaymentTransactions> = ({ ...rest }) => {
             <p>Are you sure you want to approve this proposal?</p>
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" onClick={handleApproveProposal} isLoading={isApproving}>
+            <Button colorScheme="blue" onClick={handleApproveProposal} isLoading={isApproving || isSafeLoading}>
               Approve
             </Button>
           </ModalFooter>
@@ -335,7 +317,7 @@ const DAO: React.FC<PaymentTransactions> = ({ ...rest }) => {
             <p>Are you sure you want to reject this proposal?</p>
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="red" onClick={handleRejectProposal} isLoading={isRejecting}>
+            <Button colorScheme="red" onClick={handleRejectProposal} isLoading={isRejecting || isSafeLoading}>
               Reject
             </Button>
           </ModalFooter>
@@ -372,7 +354,7 @@ const DAO: React.FC<PaymentTransactions> = ({ ...rest }) => {
             />
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" onClick={handleSendDaoTransaction} isLoading={isLoading}>
+            <Button colorScheme="blue" onClick={handleSendDaoTransaction} isLoading={isDaoLoading || isSafeLoading}>
               Send Payment
             </Button>
           </ModalFooter>

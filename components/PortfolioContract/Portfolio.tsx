@@ -6,7 +6,7 @@ import {
   Flex,
   useDisclosure,
 } from '@chakra-ui/react';
-import usePortFolioContext from 'context/usePortfolioContext';
+import usePortFolioContext from '../../contexts/usePortfolioContext';
 
 export interface PortfolioProps {
   portfolioId: number;

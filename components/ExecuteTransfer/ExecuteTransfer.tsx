@@ -1,62 +1,95 @@
-import { FC ,useContext} from 'react';
+import { FC, useContext } from 'react';
 import { useRouter } from 'next/router';
 import { PaymentTransactions } from 'types';
 import { Box, Button, Flex, Heading, List, ListItem, Text, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, ModalFooter } from '@chakra-ui/react';
-import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
+import { useSafeContext } from 'contexts/useSafeContext';
 import { useTransactionStore } from 'stores/transactionStore';
 import { useEthersStore } from 'stores/ethersStore';
 import { useSafeStore } from 'stores/safeStore';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface ExecuteTransferProps {
-  transaction: PaymentTransactions;
+  transaction?: PaymentTransactions;
 }
 
-const ExecuteTransfer: FC<ExecuteTransferProps> = ({ transaction }) => {
+const ExecuteTransfer: FC<ExecuteTransferProps> = ({ transaction: propTransaction }) => {
   const router = useRouter();
-  const { setTransaction } = useTransactionStore();
-  const { address, provider, chainId } = useEthersStore();
-  const { safeAddress, ownersAddress, contractAddress } = useSafeStore();
-  const { executeSafeTransaction, updateTransactionStatus } = useLoadSafe({ safeAddress, userAddress: address });
+  const { transaction: storeTransaction, setTransaction } = useTransactionStore();
+  const { address } = useEthersStore();
+  const { safeAddress } = useSafeStore();
+  const { 
+    executeSafeTransaction, 
+    updateTransactionStatus,
+    approveTransfer,
+    rejectTransfer 
+  } = useSafeContext();
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [isRejected, setIsRejected] = useState(false);
+  
+  // Use transaction from props or from store
+  const transaction = propTransaction || storeTransaction;
+
+  useEffect(() => {
+    // If no transaction in props or store, redirect to propose page
+    if (!transaction) {
+      router.push('/ProposeTransfer');
+    }
+  }, [transaction, router]);
 
   const handleExecute = async () => {
     setIsModalOpen(true);
   };
-  const handleConfirm = async () => {
-    await executeSafeTransaction(transaction);
-    setTransaction(transaction);
-    // Update the transaction details
-    router.push('/TransferConfirmation');
-    setIsApproved(true);
-    handleUpdateStatus(); // Call handleUpdateStatus after approval
-  };
   
+  const handleConfirm = async () => {
+    if (!transaction) return;
+    
+    try {
+      await executeSafeTransaction(transaction);
+      setTransaction(transaction);
+      setIsApproved(true);
+      await updateTransactionStatus(transaction, 'complete');
+      router.push('/TransferConfirmation');
+    } catch (error) {
+      console.error('Error executing transaction:', error);
+    }
+  };
 
   const handleCancel = () => {
     setIsModalOpen(false);
   };
 
   const handleReject = async () => {
-    setIsRejected(true);
-    // Update the transaction details
-    handleUpdateStatus(); // Call handleUpdateStatus after rejection
-  };
-
-  const handleUpdateStatus = async () => {
-    if (isApproved) {
-      // Update the transaction status to "complete"
-      await updateTransactionStatus(transaction, 'complete');
-    } else if (isRejected) {
-      // Update the transaction status to "rejected"
+    if (!transaction) return;
+    
+    try {
+      setIsRejected(true);
       await updateTransactionStatus(transaction, 'rejected');
+      router.push('/');
+    } catch (error) {
+      console.error('Error rejecting transaction:', error);
     }
   };
 
+  if (!transaction) {
+    return (
+      <Box p={4}>
+        <Heading as="h1" size="lg" mb={4}>
+          No Transaction Found
+        </Heading>
+        <Text mb={4}>
+          No transaction details available. Please propose a transaction first.
+        </Text>
+        <Button colorScheme="blue" onClick={() => router.push('/ProposeTransfer')}>
+          Go to Propose Transaction
+        </Button>
+      </Box>
+    );
+  }
+
   return (
-    <Box>
+    <Box p={4}>
       <Heading as="h1" size="lg" mb={4}>
         Execute Transfer
       </Heading>
@@ -109,9 +142,14 @@ const ExecuteTransfer: FC<ExecuteTransferProps> = ({ transaction }) => {
             <strong>Owner Address:</strong> {transaction.owneraddress}
           </Text>
         </ListItem>
+        <ListItem>
+          <Text>
+            <strong>Status:</strong> {transaction.status || 'pending'}
+          </Text>
+        </ListItem>
       </List>
       <Flex justify="space-between" mt={4}>
-        <Button colorScheme="blue" onClick={() => router.push('/ProposeTransaction')}>
+        <Button colorScheme="blue" onClick={() => router.push('/ProposeTransfer')}>
           Back to Propose Transaction
         </Button>
         <Button colorScheme="blue" onClick={() => router.push('/')}>
@@ -121,20 +159,20 @@ const ExecuteTransfer: FC<ExecuteTransferProps> = ({ transaction }) => {
           Execute Transaction
         </Button>
       </Flex>
-      {transaction && (
-        <Box mt={4}>
+      
+      {(isApproved || isRejected) && (
+        <Box mt={4} p={3} borderWidth="1px" borderRadius="md" bg={isApproved ? "green.50" : "red.50"}>
           <Heading as="h2" size="md" mb={2}>
             Transaction Status
           </Heading>
           {isApproved ? (
-            <Text>Transaction approved successfully.</Text>
-          ) : isRejected ? (
-            <Text>Transaction rejected.</Text>
+            <Text color="green.500">Transaction approved successfully.</Text>
           ) : (
-            <Text>Transaction pending...</Text>
+            <Text color="red.500">Transaction rejected.</Text>
           )}
         </Box>
       )}
+      
       <Modal isOpen={isModalOpen} onClose={handleCancel}>
         <ModalOverlay />
         <ModalContent>

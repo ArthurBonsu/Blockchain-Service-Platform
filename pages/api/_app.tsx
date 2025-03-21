@@ -6,12 +6,14 @@ import { SessionProvider } from 'next-auth/react';
 import { ChakraProvider } from '@chakra-ui/react';
 
 // Import all context providers
-import { TransactionProvider } from '@/contexts/TransactionContext';
-import { BlockchainProvider } from '@/components/BlockchainContext';
+import { TransactionProvider } from '../contexts/TransactionContext';
+import { BlockchainProvider } from '../components/BlockchainContext';
 import { DaoProvider } from '@/contexts/DaoContext';
 import { CrowdSourceProvider } from '@/contexts/CrowdSourceContext';
 import { LandOwnershipProvider } from '@/contexts/LandOwnershipContext';
 import { SwapContextProvider } from '@/contexts/useSwapContext'; // New import for Swap context
+import { ElectricityPaymentProvider } from '@/contexts/ElectricityPaymentContext'; // Add missing import
+import { TokenProvider } from '../contexts/TokenContext'; // Add missing import
 
 // Import GlobalErrorHandler dynamically with SSR
 const GlobalErrorHandler = dynamic(
@@ -56,17 +58,21 @@ function MyApp({ Component, pageProps }: AppProps) {
   
   // Create the main content with all providers
   const MainContent = () => (
-    <BlockchainProvider>
-      <TransactionProvider>
-        <DaoProvider>
-          <CrowdSourceProvider>
-            <LandOwnershipProvider>
-              <Component {...restPageProps} />
-            </LandOwnershipProvider>
-          </CrowdSourceProvider>
-        </DaoProvider>
-      </TransactionProvider>
-    </BlockchainProvider>
+    <ElectricityPaymentProvider>
+      <TokenProvider>
+        <BlockchainProvider>
+          <TransactionProvider>
+            <DaoProvider>
+              <CrowdSourceProvider>
+                <LandOwnershipProvider>
+                  <Component {...restPageProps} />
+                </LandOwnershipProvider>
+              </CrowdSourceProvider>
+            </DaoProvider>
+          </TransactionProvider>
+        </BlockchainProvider>
+      </TokenProvider>
+    </ElectricityPaymentProvider>
   );
   
   return (

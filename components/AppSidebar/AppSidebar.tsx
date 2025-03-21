@@ -1,5 +1,4 @@
-// AppSidebar.tsx
-import React, { FC, useEffect, useState, useContext } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import {
   Avatar,
   Flex,
@@ -13,12 +12,13 @@ import {
   MenuButton,
   MenuList,
 } from '@chakra-ui/react';
-import { FaChevronUp, FaCopy, FaLock, FaSignInAlt, FaSignOutAlt } from 'react-icons/fa';
+import { FaChevronUp, FaCopy, FaSignInAlt, FaSignOutAlt } from 'react-icons/fa';
 import Link from 'next/link';
 import Blockies from 'react-blockies';
-import CreateSafe from '@components/CreateSafe';
+import CreateSafe from '../../components/CreateSafe';
 import { useAppToast, useEthers } from 'hooks/index';
 import getHiddenVersion from 'utils/getHiddenName';
+import { useSafeContext } from '../../contexts/useSafeContext';
 
 interface AppSidebarProps {
   isCollapsed?: boolean;
@@ -30,6 +30,7 @@ const AppSidebar: FC<AppSidebarProps> = ({ isCollapsed = false, address }) => {
   const { onDisconnect } = useEthers();
   const { hasCopied, onCopy } = useClipboard(address || '');
   const toast = useAppToast();
+  const { connectWallet } = useSafeContext();
   const stackSpacing = isCollapsed ? 4 : 1;
 
   useEffect(() => {
@@ -94,11 +95,23 @@ const AppSidebar: FC<AppSidebarProps> = ({ isCollapsed = false, address }) => {
                 {...(isCollapsed && { justifyContent: 'center' })}
               >
                 {address ? (
-                  <Blockies
-                    seed={address}
-                    color="orange"
-                    bgColor="gray"
-                    spotColor="yellow"
+                  <img
+                    src={`data:image/png;base64,${
+                      // @ts-ignore
+                      new Blockies({
+                        seed: address,
+                        color: "orange",
+                        bgColor: "gray",
+                        size: 8,
+                        scale: 4
+                      }).create()[0].toDataURL()
+                    }`}
+                    alt="Address Identicon"
+                    style={{ 
+                      borderRadius: '50%', 
+                      width: isCollapsed ? '24px' : '32px', 
+                      height: isCollapsed ? '24px' : '32px' 
+                    }}
                   />
                 ) : (
                   <Avatar
@@ -141,7 +154,7 @@ const AppSidebar: FC<AppSidebarProps> = ({ isCollapsed = false, address }) => {
                 <Button
                   leftIcon={<Icon as={FaSignInAlt} />}
                   variant="ghost"
-                  onClick={onDisconnect}
+                  onClick={connectWallet}
                 >
                   Login
                 </Button>
@@ -154,4 +167,4 @@ const AppSidebar: FC<AppSidebarProps> = ({ isCollapsed = false, address }) => {
   );
 };
 
-export default AppSidebar
+export default AppSidebar;

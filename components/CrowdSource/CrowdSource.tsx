@@ -1,4 +1,3 @@
-// components/CrowdSource/CrowdSource.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Button,
@@ -13,10 +12,10 @@ import {
   Stack,
 } from '@chakra-ui/react';
 import AppModal from '../AppModal/AppModal';
-import useLoadSafe from 'hooks/useLoadSafe';
 import { PaymentTransactions } from 'types';
-import { useCrowdSourceContext } from '../../contexts/CrowdSourceContext';
+import { useSafeContext } from '../../contexts/useSafeContext';
 import { useEthersStore } from '../../stores/ethersStore';
+import { useCrowdSourceContext } from '../../contexts/CrowdSourceContext';
 
 export interface CrowdsourceTransferProps {
   transaction?: PaymentTransactions;
@@ -34,23 +33,18 @@ export const CrowdSource: React.FC<CrowdsourceTransferProps> = ({
   const {
     currentAccount,
     connectWallet,
-    isLoading,
     createCampaign,
     contributeToCampaign
   } = useCrowdSourceContext();
 
-  // Use safe hooks for transaction management
+  // Use SafeContext for transaction management
   const {
     proposeTransaction,
     approveTransfer,
     rejectTransfer,
     checkIfTxnExecutable,
-    safe,
-    checkIsSigned,
-  } = useLoadSafe({
-    safeAddress,
-    userAddress: userAddress || currentAccount,
-  });
+    isLoading: isSafeLoading
+  } = useSafeContext();
 
   // Local component state
   const [isBrowser, setIsBrowser] = useState(false);
@@ -261,7 +255,7 @@ export const CrowdSource: React.FC<CrowdsourceTransferProps> = ({
           </FormControl>
           <Button 
             colorScheme="green" 
-            isLoading={isLoading}
+            isLoading={isSafeLoading}
             onClick={handleCreateCampaign}
           >
             Create Campaign
@@ -295,7 +289,7 @@ export const CrowdSource: React.FC<CrowdsourceTransferProps> = ({
           </FormControl>
           <Button 
             colorScheme="blue" 
-            isLoading={isLoading}
+            isLoading={isSafeLoading}
             onClick={handleContribute}
           >
             Contribute

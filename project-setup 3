@@ -11,6 +11,7 @@
      │       ├── BlockchainMonitor.json
      │       ├── BlockchainRegistry.json
      │       ├── BlockchainRegistryBase.json
+     │       ├── BlockchainServiceToken.json
      │       ├── CarbonCreditMarket.json
      │       ├── ChaCha20Poly1305.json
      │       ├── CityEmissionsContract.json
@@ -23,6 +24,7 @@
      │       ├── ConfidenceScoreCalculator.json
      │       ├── Context.json
      │       ├── Counters.json
+     │       ├── ElectricityPaymentContract.json
      │       ├── ERC165.json
      │       ├── ERC20.json
      │       ├── FixedPointMath.json
@@ -69,9 +71,8 @@
      │       ├── UncertaintyAnalytics.json
      │       └── ZKPVerifierBase.json
      │
-     ├── components/
+       ├── components/
      │   ├── AppSignIn.tsx
-     │   ├── BlockchainContext.tsx
      │   ├── ClientInit.tsx
      │   ├── GlobalErrorHandler.tsx
      │   ├── MetaTags.tsx
@@ -109,6 +110,12 @@
      │   │   └── index.ts
      │   ├── DAO/
      │   │   ├── DAO.tsx
+     │   │   └── index.ts
+     │   ├── ElectricityPayment/
+     │   │   ├── ElectricityPayment.tsx
+     │   │   └── index.ts
+     │   ├── Energy/
+     │   │   ├── Energy.tsx
      │   │   └── index.ts
      │   ├── ExecuteTransfer/
      │   │   ├── ExecuteTransfer.tsx
@@ -158,11 +165,11 @@
      │   │   ├── index.ts
      │   │   └── SwapTransfer.tsx
      │   ├── Transaction/
-     │   │   ├── index.ts
-     │   │   └── Transaction.tsx
+     │   │   ├── Transaction.tsx
+     │   │   └── index.ts
      │   └── TransferConfirmation/
-     │       ├── index.ts
-     │       └── TransferConfirmation.tsx
+     │       ├── TransferConfirmation.tsx
+     │       └── index.ts
      │
      ├── config/
      │   ├── contract_addresses.json
@@ -182,26 +189,29 @@
      │   ├── supportedNetworkOptions.ts
      │   └── Transactions.json
      │
-     ├── contexts/
-     │   ├── buffer 2.txt
-     │   ├── buffer 3.txt
+   ├── contexts/
+     │   ├── BlockchainContext.tsx
+     │   ├── buffer2.txt
+     │   ├── buffer3.txt
      │   ├── buffertext.txt
      │   ├── CrowdSourceContext.tsx
      │   ├── DaoContext.tsx
+     │   ├── ElectricityPaymentContext.tsx
      │   ├── LandOwnershipContext.tsx
-     │   ├── TransactionContext.tsx
      │   ├── useCrowdsourceContext.tsx
      │   ├── useDaoContext.tsx
-     │   ├── usegetAllTransactionsContext.tsx
+     │   ├── useElectricityPaymentContext.tsx
      │   ├── useLandOwnership.tsx
      │   ├── usePortfolioContext.tsx
-     │   ├── useSafeContext.txt
+     │   ├── useSafeContext.tsx
      │   ├── useSwapContext.tsx
+     │   ├── useTokenContext.tsx
      │   └── useTransactionContext.tsx
-     │
-     ├── contracts/
+     ├ ├── contracts/
+     │   ├── BlockchainServicesCoin.sol
      │   ├── CrowdSource.sol
      │   ├── DAO.sol
+     │   ├── ElectricityPaymentContract.sol
      │   ├── ERC20.sol
      │   ├── FileToken.sol
      │   ├── FileTokenUpgradeable.sol
@@ -210,22 +220,19 @@
      │   ├── GnosisSafeGetAddresses.sol
      │   ├── Greeter.sol
      │   ├── LandOwnership.sol
+     │   ├── MultiEnergyToken.sol
      │   ├── MultiSigWallet.sol
      │   ├── PortfolioContract.sol
      │   ├── RequestManager.sol
      │   ├── ResponseManager.sol
-     │   ├── SafeAdmin.sol
      │   ├── SafeContracts.sol
      │   ├── SwapContract.sol
-     │   ├── TokenABC.sol
-     │   ├── TokenBTC.sol
-     │   ├── TokenETH.sol
-     │   ├── TokenXYZ.sol
      │   ├── TransactionContract.sol
      │   ├── UncertaintyAnalytics.sol
      │   ├── blockchain/
-     │   │   ├── BlockchainRegistryBase.sol
-     │   │   └── ChaCha20Poly1305.sol
+     │   ├── climate/
+     │   ├── passchain/
+     │   └── relay/
      │   ├── climate/
      │   │   ├── BlockchainWorkflow
      │   │   ├── CityEmissionsContract.sol
@@ -441,6 +448,11 @@
      │   │   ├── dao/
      │   │   │   ├── dao.tsx
      │   │   │   └── index.ts
+              ─ electricity-payment/
+     │   │        ├── bills.tsx
+     │   │        ├── history.tsx
+     │   │        ├── index.tsx
+     │   │   └     ── pay.tsx
      │   │   ├── landownership/
      │   │   │   ├── index.ts
      │   │   │   └── landownership.ts
@@ -478,7 +490,9 @@
      │   │   └── transfer.tsx
      │   └── transactions/
      │       └── index.tsx
-     │
+     ││   ├── token/  # New token-related pages
+│   │   ├── index.tsx
+│   │   └── token.tsx
      ├── passchain/
      │   ├── .gitattributes
      │   └── LICENSE

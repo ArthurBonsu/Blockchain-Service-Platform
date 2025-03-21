@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useBlockchain } from '../components/BlockchainContext';
-import { useTransactions } from '@/contexts/TransactionContext';
+import { useSafeContext } from '../contexts/useSafeContext';
 import { Logger } from '../utils/logger';
 
 const TransactionForm: React.FC = () => {
-  const { web3, accounts, connect, processTransaction } = useBlockchain();
-  const { addTransaction } = useTransactions();
+  // Use SafeContext instead of blockchain-specific contexts
+  const { 
+    connectWallet, 
+    checkIfWalletIsConnect, 
+    currentAccount,
+    sendSafeTransaction,
+    proposeTransaction
+  } = useSafeContext();
+
   const [isClient, setIsClient] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -26,11 +32,9 @@ const TransactionForm: React.FC = () => {
     // Log connection status changes
     Logger.info('Connection status', {
       isClient,
-      web3Exists: !!web3,
-      accountsCount: accounts?.length || 0,
-      contractsInitialized: !!processTransaction
+      accountConnected: !!currentAccount
     });
-  }, [web3, accounts, isClient]);
+  }, [currentAccount, isClient]);
 
   if (!isClient) {
     return null;
@@ -42,7 +46,7 @@ const TransactionForm: React.FC = () => {
     
     try {
       Logger.info('Attempting wallet connection');
-      await connect();
+      await connectWallet();
       Logger.info('Wallet connected successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to connect wallet';
@@ -56,9 +60,9 @@ const TransactionForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!web3 || accounts.length === 0) {
+    if (!currentAccount) {
       await handleConnect();
-      if (!web3 || accounts.length === 0) {
+      if (!currentAccount) {
         return; // Exit if connection failed
       }
     }
@@ -70,31 +74,53 @@ const TransactionForm: React.FC = () => {
     Logger.info('Transaction form submitted', { 
       formData,
       connectionStatus: {
-        web3Exists: !!web3,
-        accountsCount: accounts?.length || 0
+        accountConnected: !!currentAccount
       }
     });
 
     try {
-      const transactionResult = await processTransaction(formData);
+      // Prepare transaction data
+      const transactionData = {
+        data: null,
+        username: currentAccount,
+        address: '', // You might want to specify the recipient
+        amount: parseFloat(formData.ktCO2),
+        comment: `${formData.city} - ${formData.sector}`,
+        timestamp: new Date(),
+        receipient: '', // Specify recipient
+        receipients: [],
+        txhash: '',
+        USDprice: 0,
+        paymenthash: '',
+        owneraddress: currentAccount
+      };
+
+      // Use SafeContext method to send transaction
+      const transactionResult = await sendSafeTransaction(transactionData);
+      
       const endTime = performance.now();
       const processingTime = endTime - startTime;
 
-      const transactionData = {
-        ...formData,
-        blockchainResults: transactionResult,
-        processingTime,
-        timestamp: Date.now()
-      };
+      // Optionally propose the transaction
+      await proposeTransaction(
+        '', // safeAddress
+        transactionData, 
+        {
+          safeAddress: '',
+          transaction: transactionData,
+          ownersAddress: [],
+          safeContractAddress: '',
+          threshold: 0,
+          ownerInfo: []
+        }
+      );
 
-      addTransaction(transactionData);
       setResult(transactionResult);
       setFormData({ city: '', date: '', sector: '', ktCO2: '' }); // Clear form
 
       Logger.info('Transaction processed successfully', { 
         transactionResult,
-        processingTime,
-        transactionData
+        processingTime
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
@@ -117,7 +143,7 @@ const TransactionForm: React.FC = () => {
     }));
   };
 
-  const isWalletConnected = web3 && accounts.length > 0;
+  const isWalletConnected = !!currentAccount;
 
   return (
     <div className="transaction-form">

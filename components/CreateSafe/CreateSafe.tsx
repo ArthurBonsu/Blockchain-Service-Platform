@@ -1,61 +1,38 @@
-
-// CreateSafe.tsx
 import {
   Box,
   Button,
-  Flex,
   Heading,
-  Menu,
-  MenuButton,
-  MenuList,
   Text,
-  useClipboard,
-  Input,
-  Stack,
-  InputGroup,
-  InputLeftElement,
-  InputRightElement,
-  Grid,
   VStack,
-  FormControl,
-  FormLabel,
-  FormErrorMessage,
-  FormHelperText,
-  chakra,
   useToast,
 } from '@chakra-ui/react';
-import { FC, useState, useEffect, useContext } from 'react';
-import { useSession, signIn, signOut } from 'next-auth/react';
-import { useLoadSafe } from '../../hooks/useLoadSafe';
-import useSafeDetailsAndSetup from 'hooks/useSafeDetails.ts';
+import { FC, useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import { SafecontractAddress } from 'constants/constants';
-import { useUserStore } from 'stores/userStore';
-import { useSafeStore } from 'stores/safeStore';
 import { useEthersStore } from 'stores/ethersStore';
-import { BsGithub, BsTwitter, BsGoogle } from 'react-icons/bs';
-import { signInWithPopup } from 'firebase/auth';
-import { GoogleAuthProvider, TwitterAuthProvider } from 'firebase/auth';
-import { auth, db } from 'services/firebaseConfig';
-import { useAppToast } from 'hooks/index';
-
-const { setUpMultiSigSafeAddress } = useSafeDetailsAndSetup;
+import { useSafeContext } from '../../contexts/useSafeContext';
 
 const CreateSafe: FC = () => {
   const router = useRouter();
   const [isBrowser, setIsBrowser] = useState(false);
   const useraddress = useEthersStore((state) => state.address);
   const toast = useToast();
-  const { data: session, status } = useSession();
-  const safeStore = useSafeStore();
-  const { safeAddress, ownersAddress, contractAddress } = safeStore;
-  const { setSafeAddress, setOwnersAddress, setContractAddress, setSafeStore } = safeStore;
+  const { data: session } = useSession();
+
+  // Use SafeContext methods and state
+  const { 
+    safeAddress, 
+    setSafeAddress, 
+    setOwnersAddress, 
+    setUpMultiSigSafeAddress,
+    isPendingSafeCreation,
+    pendingSafeData,
+    setIsPendingSafeCreation,
+    setPendingSafeData
+  } = useSafeContext();
+
   const [isCreatingSafe, setIsCreatingSafe] = useState(false);
-  const { executeSafeTransaction, userAddToSafe, isLoading } = useLoadSafe({
-    safeAddress,
-    userAddress: useraddress,
-  });
-  const { isPendingSafeCreation, pendingSafeData, setIsPendingSafeCreation, setPendingSafeData } = useSafeStore();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -84,25 +61,39 @@ const CreateSafe: FC = () => {
     try {
       const progress = { currentStep: 1, totalSteps: 2 };
       setPendingSafeData({ status: 'Creating safe...', progress });
+      
+      // Use context method to set up multi-sig safe address
       const newSafeAddress = await setUpMultiSigSafeAddress(SafecontractAddress);
+      
       progress.currentStep++;
       setPendingSafeData({ status: 'Deploying contract...', progress });
+      
+      // Update safe address and owners
       setSafeAddress(newSafeAddress);
-      setOwnersAddress([]); // Update ownersAddress state
-      setSafeStore({ safeAddress: newSafeAddress, contractAddress: SafecontractAddress });
+      setOwnersAddress([]); // Reset owners list
+      
       setIsCreatingSafe(false);
       console.log(`Safe Address: ${newSafeAddress}`);
+      
       router.push('/AddSafeOwners'); // Route to AddSafeOwners page
-      setPendingSafeData(null); // Clear pending safe data
-      setIsPendingSafeCreation(false); // Set isPendingSafeCreation to false
+      
+      // Clear pending safe data
+      setPendingSafeData(null);
+      setIsPendingSafeCreation(false);
     } catch (error) {
       console.error(error);
       toast({
         title: 'Error creating safe',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
         status: 'error',
         duration: 5000,
         isClosable: true,
       });
+      
+      // Reset states on error
+      setIsCreatingSafe(false);
+      setPendingSafeData(null);
+      setIsPendingSafeCreation(false);
     }
   };
 
@@ -128,7 +119,7 @@ const CreateSafe: FC = () => {
       <VStack spacing={4}>
         <Button
           onClick={handleCreateSafe}
-          disabled={isCreatingSafe || isLoading}
+          disabled={isCreatingSafe || isPendingSafeCreation}
         >
           Create Safe
         </Button>

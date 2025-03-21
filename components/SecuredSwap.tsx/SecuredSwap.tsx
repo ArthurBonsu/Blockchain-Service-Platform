@@ -7,8 +7,8 @@ import {
   useToast,
   Tooltip
 } from '@chakra-ui/react';
-import AppAlertDialog from '@components/AppAlertDialog';
-import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
+import AppAlertDialog from '../../components/AppAlertDialog';
+import { useSafeContext } from '../../contexts/useSafeContext';
 import { useSwapContext } from 'contexts/useSwapContext';
 
 interface SecuredSwapProps extends ButtonProps {
@@ -40,20 +40,30 @@ const SecuredSwap: FC<SecuredSwapProps> = ({
   const localDisclosure = useDisclosure();
   const toast = useToast();
   
-  // Get the safe SDK functions
-  const { rejectTransfer } = useLoadSafe({ safeAddress, userAddress });
+  // Get the safe context functions
+  const { 
+    rejectTransfer, 
+    checkIfWalletIsConnect,
+    connectWallet 
+  } = useSafeContext();
   
-  // Use our swap context to ensure wallet connection
-  const { currentAccount, connectWallet } = useSwapContext();
+  // Use swap context to ensure wallet connection
+  const { currentAccount } = useSwapContext();
 
   // Check wallet connection
   useEffect(() => {
-    if (!currentAccount) {
-      connectWallet().catch(err => {
+    const checkConnection = async () => {
+      try {
+        if (!currentAccount) {
+          await connectWallet();
+        }
+      } catch (err) {
         console.error("Failed to connect wallet:", err);
         setError("Wallet connection failed. Please connect manually.");
-      });
-    }
+      }
+    };
+
+    checkConnection();
   }, [currentAccount, connectWallet]);
 
   const handleSubmit = useCallback(
@@ -73,11 +83,18 @@ const SecuredSwap: FC<SecuredSwapProps> = ({
       setError(null);
       
       try {
-        await rejectTransfer({ 
-          safeTxHash, 
-          execTxn, 
-          nonce, 
-          hashTxn: hashTxn || '' 
+        await rejectTransfer({
+          safeAddress,
+          transaction: {
+            // Populate with necessary transaction details
+            // This might need adjustment based on your specific context implementation
+            txhash: safeTxHash,
+            nonce,
+            hashtxn: hashTxn || ''
+          },
+          execTxn,
+          nonce,
+          hashtxn: hashTxn || ''
         });
         
         toast({
@@ -107,7 +124,17 @@ const SecuredSwap: FC<SecuredSwapProps> = ({
         localDisclosure.onClose();
       }
     },
-    [rejectTransfer, safeTxHash, execTxn, nonce, localDisclosure, hashTxn, toast, onRejectComplete]
+    [
+      rejectTransfer, 
+      safeAddress,
+      safeTxHash, 
+      execTxn, 
+      nonce, 
+      localDisclosure, 
+      hashTxn, 
+      toast, 
+      onRejectComplete
+    ]
   );
 
   const isButtonDisabled = rest.isDisabled || !safeTxHash || !currentAccount;

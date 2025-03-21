@@ -121,18 +121,19 @@ export type SwapTransactionType = {
 
  export type PaymentTransactions = {
   data: any;
-  username: string , 
-  address:string, 
-  amount:number , 
-  comment:string ,
-  timestamp:Date, 
-  receipient:string ,
-  receipients?: Array<string> ,
-  txhash:string , 
-  USDprice:number,
-  paymenthash: string,
-  owneraddress: string  
- }
+  username: string; 
+  address: string; 
+  amount: number; 
+  comment: string;
+  timestamp: Date; 
+  receipient: string;
+  receipients?: Array<string>;
+  txhash: string; 
+  USDprice: number;
+  paymenthash: string;
+  owneraddress: string;
+  status?: 'pending' | 'approved' | 'rejected' | 'complete';
+}
 
 export interface TransactionParams {
   username?: string;

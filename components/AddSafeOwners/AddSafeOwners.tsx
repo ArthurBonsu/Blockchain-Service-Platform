@@ -1,160 +1,153 @@
-import { FC, useState, useCallback, useEffect } from 'react';
-import { useSession, signIn, signOut } from 'next-auth/react';
-import { useLoadSafe, useSafeDetailsAndSetup } from '../../context/useLoadContext';
-
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { SafecontractAddress } from 'constants/constants';
-import { useUserStore } from 'stores/userStore';
 import {
-  Avatar,
   Button,
-  Flex,
   Heading,
-  Menu,
-  useDisclosure,
-  MenuButton,
-  MenuList,
   Text,
-  useClipboard,
   Input,
-  Stack,
-  InputGroup,
-  InputLeftElement,
-  InputRightElement,
-  Box,
-  Grid,
   VStack,
   FormControl,
   FormLabel,
   FormErrorMessage,
-  FormHelperText,
-  chakra,
+  Box,
   ChakraProvider,
+  useToast
 } from '@chakra-ui/react';
-import { useAppToast } from 'hooks/index';
-import { BsGithub, BsTwitter, BsGoogle } from 'react-icons/bs';
-import { signInWithPopup } from 'firebase/auth';
-import { GoogleAuthProvider, TwitterAuthProvider } from 'firebase/auth';
-import { auth, db } from 'services/firebaseConfig';
-import { useSafeStore } from 'stores/safeStore';
-import { useEthersStore } from 'stores/ethersStore';
 import { useForm } from 'react-hook-form';
-import { NextPage } from 'next';
+import { useSafeContext } from '../../contexts/useSafeContext';
+import { isAddress } from 'ethers';
 
 type FormData = {
   ownerAddress: string;
 };
 
-const AddOwners: NextPage = () => {
+const AddSafeOwners: React.FC = () => {
   const router = useRouter();
-  const { replace } = useRouter();
+  const toast = useToast();
   const [isBrowser, setIsBrowser] = useState(false);
-  const useraddress = useEthersStore((state) => state.address);
-  const userAddress = useEthersStore((state) => state.address);
-  const { safeAddress, ownersAddress } = useSafeStore();
-  const setOwnersAddress = useSafeStore((state) => state.setOwnersAddress);
-  const {
-    userAddToSafe,
-    executeSafeTransaction,
+
+  // Destructure all required context methods and state
+  const { 
+    safeAddress, 
+    addOwner, 
+    ownersAddress, 
     getSafeInfoUsed,
-  } = useLoadSafe({ safeAddress, userAddress });
+    setOwnersAddress,
+    setPendingAddOwnerData,
+    isPendingAddOwner
+  } = useSafeContext();
+
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    reset,
+    formState: { errors, isSubmitting }
   } = useForm<FormData>();
-  const {
-    isPendingAddOwner,
-    pendingAddOwnerData,
-    setIsPendingAddOwner,
-    setPendingAddOwnerData,
-  } = useSafeStore();
-  const [isAddingOwner, setIsAddingOwner] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const { data: session, status } = useSession();
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsBrowser(true);
-    }
+    setIsBrowser(typeof window !== 'undefined');
   }, []);
 
+  // Redirect if no safe address
   useEffect(() => {
-    if (!useraddress) {
-      replace('/');
+    if (!safeAddress) {
+      router.replace('/');
     }
-  }, [useraddress, replace]);
+  }, [safeAddress, router]);
 
+  // Fetch safe info on component mount
   useEffect(() => {
-    if (session) {
-      setTimeout(() => {
-        router.push('/');
-      }, 5000);
-    }
-  }, [session, router]);
-
-  useEffect(() => {
-    const handleGetSafeInfo = async () => {
-      const safeInfo = await getSafeInfoUsed();
-      console.log(safeInfo);
-      setOwnersAddress([...ownersAddress, '0x...']);
+    const fetchSafeInfo = async () => {
+      try {
+        const safeInfo = await getSafeInfoUsed();
+        console.log('Safe Info:', safeInfo);
+      } catch (error) {
+        console.error('Error fetching safe info:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch safe information',
+          status: 'error',
+          duration: 3000,
+          isClosable: true
+        });
+      }
     };
-    handleGetSafeInfo();
-  }, [getSafeInfoUsed, ownersAddress, setOwnersAddress]);
+
+    if (safeAddress) {
+      fetchSafeInfo();
+    }
+  }, [safeAddress, getSafeInfoUsed, toast]);
 
   const handleAddOwner = async (data: FormData) => {
     try {
-      setIsPendingAddOwner(true);
-      const progress = {
-        currentStep: 1,
-        totalSteps: 2,
-      };
+      // Validate Ethereum address
+      if (!isAddress(data.ownerAddress)) {
+        throw new Error('Invalid Ethereum address');
+      }
+
+      // Set pending add owner state
       setPendingAddOwnerData({
         status: 'Adding owner...',
-        progress,
+        progress: {
+          currentStep: 1,
+          totalSteps: 2
+        }
       });
-      await userAddToSafe();
-      progress.currentStep++;
-      setPendingAddOwnerData({
-        status: 'Updating owners list...',
-        progress,
-      });
+
+      // Add owner through context method
+      await addOwner(data.ownerAddress);
+
+      // Update owners list
       setOwnersAddress([...ownersAddress, data.ownerAddress]);
-      console.log(`Owner added: ${data.ownerAddress}`);
+
+      // Show success toast
+      toast({
+        title: 'Owner Added',
+        description: `Owner ${data.ownerAddress} successfully added to the safe`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true
+      });
+
+      // Reset form
+      reset();
     } catch (error) {
-      console.error(error);
+      console.error('Error adding owner:', error);
+      
+      // Show error toast
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to add owner',
+        status: 'error',
+        duration: 3000,
+        isClosable: true
+      });
     } finally {
-      setIsPendingAddOwner(false);
+      // Reset pending add owner state
       setPendingAddOwnerData(null);
     }
   };
 
+  // Prevent rendering on server
   if (!isBrowser) return null;
-
-  if (session) {
-    return (
-      <ChakraProvider>
-        <Box maxW="md" mx="auto" mt={8}>
-          <Heading mb={6}>You are already signed in</Heading>
-          <Text>Redirecting to home page in 5 seconds...</Text>
-        </Box>
-      </ChakraProvider>
-    );
-  }
 
   return (
     <ChakraProvider>
       <Box maxW="md" mx="auto" mt={8}>
-        <Heading mb={6}>Add Owners</Heading>
-        <VStack spacing={4}>
+        <Heading mb={6}>Add Owners to Safe</Heading>
+        
+        <VStack spacing={4} align="stretch">
+          {/* Owner Addition Form */}
           <form onSubmit={handleSubmit(handleAddOwner)}>
-            <FormControl>
-            <FormLabel>Owner Address</FormLabel>
+            <FormControl isInvalid={!!errors.ownerAddress}>
+              <FormLabel>Owner Wallet Address</FormLabel>
               <Input
                 {...register('ownerAddress', {
                   required: 'Owner address is required',
+                  validate: (value) => 
+                  isAddress(value) || 'Invalid Ethereum address'
                 })}
-                placeholder="Enter owner address"
+                placeholder="Enter owner's wallet address"
               />
               {errors.ownerAddress && (
                 <FormErrorMessage>
@@ -162,44 +155,51 @@ const AddOwners: NextPage = () => {
                 </FormErrorMessage>
               )}
             </FormControl>
-            <Button type="submit" disabled={isAddingOwner}>
+            
+            <Button 
+              mt={4} 
+              colorScheme="blue" 
+              type="submit" 
+              isLoading={isSubmitting || isPendingAddOwner}
+              width="full"
+            >
               Add Owner
             </Button>
           </form>
+
+          {/* Current Owners List */}
           {ownersAddress.length > 0 && (
-            <Text>
-              Number of owners: {ownersAddress.length}
-            </Text>
+            <Box>
+              <Heading size="sm" mb={2}>Current Owners</Heading>
+              {ownersAddress.map((owner, index) => (
+                <Text key={owner} fontSize="sm">
+                  Owner {index + 1}: {owner}
+                </Text>
+              ))}
+            </Box>
           )}
-          {ownersAddress.map((owner, index) => (
-            <Text key={index}>
-              Owner {index + 1}: {owner}
-            </Text>
-          ))}
-          {isPendingAddOwner && <Text>Loading...</Text>}
-          {pendingAddOwnerData && (
-            <Text>
-              Current Status: {pendingAddOwnerData.status}
-              <Button
-                onClick={() => {
-                  setPendingAddOwnerData(null);
-                  setIsPendingAddOwner(false);
-                }}
-              >
-                Cancel
-              </Button>
-            </Text>
-          )}
-          <Button onClick={() => router.push('/')}>
-            Go back to homepage
-          </Button>
-          <Button onClick={() => router.push('/ProposeTransaction')}>
-            Make a transaction
-          </Button>
+
+          {/* Navigation Buttons */}
+          <VStack spacing={2}>
+            <Button 
+              onClick={() => router.push('/')} 
+              width="full"
+              variant="outline"
+            >
+              Back to Home
+            </Button>
+            <Button 
+              onClick={() => router.push('/ProposeTransaction')} 
+              width="full"
+              colorScheme="green"
+            >
+              Propose Transaction
+            </Button>
+          </VStack>
         </VStack>
       </Box>
     </ChakraProvider>
   );
 };
 
-export default AddOwners;
+export default AddSafeOwners;

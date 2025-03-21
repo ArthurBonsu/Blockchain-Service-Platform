@@ -1,57 +1,94 @@
 import { Button, ButtonProps, useDisclosure } from '@chakra-ui/react';
-import AppAlertDialog from '@components/AppAlertDialog';
-import useLoadSafe from 'hooks/useLoadSafe';
-import { FC, useCallback, useState, useEffect } from 'react';
+import AppAlertDialog from '../../components/AppAlertDialog';
+import { useSafeContext } from '../../contexts/useSafeContext';
+import React, { FC, useCallback, useState } from 'react';
 import { PaymentTransactions } from "types";
+import { useTransactionStore } from 'stores/transactionStore';
 
 interface ApproveTransferProps extends ButtonProps {
   transaction: PaymentTransactions;
   safeAddress: string;
   userAddress: string;
+  onApprovalComplete?: () => void;
 }
 
 const ApproveTransfer: FC<ApproveTransferProps> = ({
   transaction,
   safeAddress,
   userAddress,
+  onApprovalComplete,
   ...props
 }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [isBrowser, setIsBrowser] = useState(false);
   const localDisclosure = useDisclosure();
-  const { approveTransfer, ...rest } = useLoadSafe({ safeAddress, userAddress });
+  
+  // Use SafeContext methods
+  const { 
+    approveTransfer, 
+    updateTransactionStatus 
+  } = useSafeContext();
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsBrowser(true);
-    }
-  }, []);
+  const { setTransaction } = useTransactionStore();
 
   const handleSubmit = useCallback(
     async () => {
+      if (!transaction) return;
+      
       setIsLoading(true);
-      await approveTransfer(transaction);
-      setIsLoading(false);
+      try {
+        // Call approve transfer method from SafeContext
+        await approveTransfer(transaction);
+        
+        // Update transaction status - ensure it matches the type definition
+        const updatedTransaction: PaymentTransactions = {
+          ...transaction,
+          status: 'approved'
+        };
+        
+        // Update in global store
+        setTransaction(updatedTransaction);
+        
+        // Update status in backend/blockchain
+        await updateTransactionStatus(transaction, 'approved');
+        
+        // If callback provided, call it
+        if (onApprovalComplete) {
+          onApprovalComplete();
+        }
+      } catch (error) {
+        console.error('Error approving transfer:', error);
+      } finally {
+        setIsLoading(false);
+        localDisclosure.onClose();
+      }
     },
-    [transaction, approveTransfer]
+    [
+      transaction, 
+      safeAddress, 
+      userAddress, 
+      approveTransfer, 
+      updateTransactionStatus, 
+      setTransaction, 
+      onApprovalComplete, 
+      localDisclosure
+    ]
   );
-
-  if (!isBrowser) return null;
 
   return (
     <>
-      <Button
+      <Button 
         colorScheme="blue"
         onClick={localDisclosure.onOpen}
+        isDisabled={transaction.status === 'approved' || transaction.status === 'complete'}
         {...props}
       >
-        Approve
+        {transaction.status === 'approved' ? 'Approved' : 'Approve'}
       </Button>
       <AppAlertDialog
         isLoading={isLoading}
         handleSubmit={handleSubmit}
         header="Approve Transaction"
-        body="This action will approve this transaction with separate Transaction will be performed to submit the approval."
+        body="This action will approve this transaction. A separate transaction will be performed to submit the approval."
         disclosure={localDisclosure}
         customOnClose={() => {
           localDisclosure.onClose();
