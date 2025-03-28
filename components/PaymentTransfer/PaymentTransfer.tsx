@@ -5,7 +5,7 @@ import {
 } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
 import { FC, useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from "yup";
 import React from 'react';
@@ -27,6 +27,21 @@ interface PaymentTransferProps {
   onPayTransfer: () => void;
 }
 
+// Define form data type with explicit receipients array
+interface PaymentFormData {
+  username: string;
+  address: string;
+  amount: number;
+  comment: string;
+  timestamp: Date;
+  receipient: string;
+  receipients: string[];
+  txhash?: string;
+  USDprice: number;
+  paymenthash: string;
+  owneraddress: string;
+}
+
 const pathname = "/SimpleTransfer";
 
 // Transaction Display Component
@@ -35,7 +50,8 @@ const TransactionDisplay: React.FC<TransactionDisplayProps> = ({
   username, 
   paymenthash, 
   receipients, 
-  contractowneraddress, 
+  contractowneraddress,
+  owneraddress,  
   amount, 
   usdPrice 
 }) => {
@@ -113,35 +129,33 @@ const PaymentTransfer: FC<PaymentTransferProps> = ({
   const [openMultiRecipient, setMultiReceipient] = useState(false);
   const [paymentcompleted, setPaymentcompleted] = useState(false);
 
-  // Form validation schema
-  const schema = yup.object({
-    username: yup.string().required(),
-    address: yup.string().required(),
-    amount: yup.number().required(),
-    comment: yup.string().required(),
-    timestamp: yup.date().required(),
-    receipient: yup.string().required(),
-    receipients: yup.array().of(yup.string()).required(),
-    txhash: yup.string(),
-    USDprice: yup.number().required(),
-    paymenthash: yup.string().required(),
-    owneraddress: yup.string().required()
-  }).required();
-
+  // Initialize form with correct typing for receipients
   const {
     control,
     register,
     handleSubmit,
-    formState: { isSubmitting },
-  } = useForm<PaymentTransferProps>({
-    resolver: yupResolver(schema)
+    formState: { isSubmitting, errors },
+  } = useForm<PaymentFormData>({
+    resolver: yupResolver(paymentFormSchema),
+    defaultValues: {
+      username: username || '',
+      address: address || '',
+      amount: amount || 0,
+      comment: comment || '',
+      timestamp: new Date(),
+      receipient: '',
+      receipients: [],
+      USDprice: USDprice || 0,
+      paymenthash: '',
+      owneraddress: ''
+    }
   });
   
-  const { fields, append, remove } = useFieldArray({
+  // Now with correct typing on PaymentFormData
+  const { fields, append, remove } = useFieldArray<PaymentFormData>({
     control,
     name: 'receipients'
   });
-
   // Check if payment is completed when component mounts or when isPaid changes
   useEffect(() => {
     if (isPaid) {
@@ -167,7 +181,7 @@ const PaymentTransfer: FC<PaymentTransferProps> = ({
   };
 
   // Handle form submission
-  const onSubmitPayment = async (data: PaymentTransferProps) => {
+  const onSubmitPayment = async (data: PaymentFormData) => {
     try {
       // Send payment
       await sendPayment(data);
@@ -188,7 +202,7 @@ const PaymentTransfer: FC<PaymentTransferProps> = ({
             textColor="white" 
             onClick={() => {
               onMultiReceipientOpen();
-              append({});
+              append(''); // Append an empty string instead of empty object
             }}
           >
             Add Recipients
@@ -203,7 +217,7 @@ const PaymentTransfer: FC<PaymentTransferProps> = ({
           {fields.map((field, index) => (
             <InputGroup key={field.id} size="sm" mb={2}>
               <Input 
-                {...register(`receipients.${index}`, { required: true })} 
+                {...register(`receipients.${index}` as const)} 
                 placeholder="Recipient address"
                 bg="white" 
               />
@@ -239,7 +253,7 @@ const PaymentTransfer: FC<PaymentTransferProps> = ({
                 </InputGroup>
                 
                 <InputGroup>
-                  <Input placeholder='Amount of tokens' {...register("amount")} bg="white" />
+                  <Input placeholder='Amount of tokens' {...register("amount")} bg="white" type="number" />
                 </InputGroup>
                 
                 <InputGroup>
@@ -253,6 +267,10 @@ const PaymentTransfer: FC<PaymentTransferProps> = ({
                     {...register("timestamp")} 
                     bg="white"
                   />
+                </InputGroup>
+                
+                <InputGroup>
+                  <Input placeholder='Recipient' {...register("receipient")} bg="white" />
                 </InputGroup>
                 
                 <InputGroup>

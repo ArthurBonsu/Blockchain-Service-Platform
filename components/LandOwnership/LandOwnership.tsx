@@ -1,5 +1,5 @@
-// components/LandOwnership/EnhancedLandOwnership.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+// components/LandOwnership/LandOwnership.tsx
+import React, { useState, useEffect } from 'react';
 import {
   Button,
   Flex,
@@ -36,12 +36,52 @@ import {
 } from '@chakra-ui/react';
 import AppModal from '../AppModal/AppModal';
 import { useLandOwnershipContext } from '@/contexts/LandOwnershipContext';
-import { useEthersStore } from '@/stores/ethersStore';
-import { useSafeStore } from '@/stores/safeStore';
-import { useTransactionStore } from '@/stores/transactionStore';
 
-// Geohash utility (you'd want to import a proper geohash library)
-import * as geohash from 'ngeohash';
+// Custom geohash implementation
+const geohashEncode = (latitude: number, longitude: number, precision: number = 9): string => {
+  const base32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+  let geohash = '';
+  let bits = 0;
+  let bitsTotal = 0;
+  let hashValue = 0;
+  let maxLat = 90;
+  let minLat = -90;
+  let maxLng = 180;
+  let minLng = -180;
+  let mid;
+  
+  while (geohash.length < precision) {
+    if (bitsTotal % 2 === 0) {
+      mid = (maxLng + minLng) / 2;
+      if (longitude > mid) {
+        hashValue = (hashValue << 1) + 1;
+        minLng = mid;
+      } else {
+        hashValue = (hashValue << 1) + 0;
+        maxLng = mid;
+      }
+    } else {
+      mid = (maxLat + minLat) / 2;
+      if (latitude > mid) {
+        hashValue = (hashValue << 1) + 1;
+        minLat = mid;
+      } else {
+        hashValue = (hashValue << 1) + 0;
+        maxLat = mid;
+      }
+    }
+    
+    bits++;
+    bitsTotal++;
+    if (bits === 5) {
+      geohash += base32.charAt(hashValue);
+      bits = 0;
+      hashValue = 0;
+    }
+  }
+  
+  return geohash;
+};
 
 export interface LandOwnershipProps {
   landId?: number;
@@ -59,21 +99,21 @@ export const LandOwnership: React.FC<LandOwnershipProps> = ({
   landPrice = 0,
   ...rest
 }) => {
-  // Contexts and Stores
+  // Get context
   const {
     connectWallet,
     currentAccount,
     isLoading,
-    sendTransaction,
-    handleChange,
-    formData,
     registerLand,
     transferLand,
     updateLandPrice,
     buyLand,
     getLandDetails,
     getAllLands,
-    landRegistry
+    getLandPriceHistory,
+    getRoyaltyBalance,
+    claimRoyalties,
+    landRegistry,
   } = useLandOwnershipContext();
 
   // Local State
@@ -89,7 +129,7 @@ export const LandOwnership: React.FC<LandOwnershipProps> = ({
     partialSize: 0,
     geohash: ''
   });
-  const [landPriceHistory, setLandPriceHistory] = useState([]);
+  const [landPriceHistory, setLandPriceHistory] = useState<any[]>([]);
   const [royaltyBalance, setRoyaltyBalance] = useState(0);
 
   // Modal Controls
@@ -100,17 +140,28 @@ export const LandOwnership: React.FC<LandOwnershipProps> = ({
   const priceHistoryDisclosure = useDisclosure();
   const partialTransferDisclosure = useDisclosure();
 
-  // Geohash Generation Utility
-  const generateGeohash = (lat: number, lon: number) => {
-    return geohash.encode(lat, lon);
-  };
+  // Load royalty balance on component mount
+  useEffect(() => {
+    if (currentAccount) {
+      const loadRoyaltyBalance = async () => {
+        try {
+          const balance = await getRoyaltyBalance();
+          setRoyaltyBalance(balance);
+        } catch (error) {
+          console.error('Error loading royalty balance:', error);
+        }
+      };
+      
+      loadRoyaltyBalance();
+    }
+  }, [currentAccount, getRoyaltyBalance]);
 
   // Handle Geolocation for Land Registration
   const handleGetLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((position) => {
         const { latitude, longitude } = position.coords;
-        const generatedGeohash = generateGeohash(latitude, longitude);
+        const generatedGeohash = geohashEncode(latitude, longitude);
         setNewLandDetails(prev => ({
           ...prev,
           geohash: generatedGeohash
@@ -137,7 +188,7 @@ export const LandOwnership: React.FC<LandOwnershipProps> = ({
     try {
       const txHash = await registerLand({
         landId: 0, // Will be assigned by contract
-        landOwner: currentAccount,
+        landOwner: currentAccount || '',
         landLocation: newLandDetails.location,
         landSize: newLandDetails.size,
         landPrice: newLandDetails.price,
@@ -160,8 +211,7 @@ export const LandOwnership: React.FC<LandOwnershipProps> = ({
     }
     
     try {
-      const txHash =// Continued from previous artifact
-      await transferLand(
+      const txHash = await transferLand(
         selectedLandId, 
         newLandDetails.newOwner, 
         newLandDetails.partialSize
@@ -178,7 +228,6 @@ export const LandOwnership: React.FC<LandOwnershipProps> = ({
   // Fetch Price History
   const fetchLandPriceHistory = async (landId: number) => {
     try {
-      // You would implement this method in your context/service
       const history = await getLandPriceHistory(landId);
       setLandPriceHistory(history);
       priceHistoryDisclosure.onOpen();
@@ -187,14 +236,31 @@ export const LandOwnership: React.FC<LandOwnershipProps> = ({
     }
   };
 
+  // Handle price update
+  const handleUpdatePrice = async () => {
+    if (selectedLandId <= 0 || !newLandDetails.price) {
+      alert('Please select a land and enter a new price');
+      return;
+    }
+    
+    try {
+      const txHash = await updateLandPrice(selectedLandId, newLandDetails.price);
+      setTransactionHash(txHash);
+      updatePriceDisclosure.onClose();
+      getAllLands(); // Refresh land registry
+    } catch (error) {
+      console.error('Error updating price:', error);
+    }
+  };
+
   // Claim Royalties
   const handleClaimRoyalties = async () => {
     try {
-      // You would implement this method in your context/service
       const txHash = await claimRoyalties();
       setTransactionHash(txHash);
+      
       // Refresh royalty balance
-      const balance = await getRoyaltyBalance(currentAccount);
+      const balance = await getRoyaltyBalance();
       setRoyaltyBalance(balance);
     } catch (error) {
       console.error('Error claiming royalties:', error);
@@ -422,6 +488,34 @@ export const LandOwnership: React.FC<LandOwnershipProps> = ({
             isLoading={isLoading}
           >
             Transfer Partial Land
+          </Button>
+        </Stack>
+      </AppModal>
+
+      {/* Update Price Modal */}
+      <AppModal
+        disclosure={updatePriceDisclosure}
+        title="Update Land Price"
+        modalSize="md"
+      >
+        <Stack spacing={4}>
+          <FormControl>
+            <FormLabel>New Price (ETH)</FormLabel>
+            <NumberInput>
+              <NumberInputField 
+                placeholder="Enter new price in ETH" 
+                value={newLandDetails.price || ''}
+                onChange={(e) => setNewLandDetails({...newLandDetails, price: parseFloat(e.target.value)})}
+              />
+            </NumberInput>
+          </FormControl>
+          
+          <Button 
+            colorScheme="orange" 
+            onClick={handleUpdatePrice}
+            isLoading={isLoading}
+          >
+            Update Price
           </Button>
         </Stack>
       </AppModal>

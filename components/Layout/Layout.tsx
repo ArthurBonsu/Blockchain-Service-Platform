@@ -15,8 +15,8 @@ import {
 } from '@chakra-ui/react';
 import { LogoutIcon } from '@heroicons/react/solid';
 
-import AppSidebar from '@components/AppSidebar';
-import MetaTags from '@components/MetaTags';
+import AppSidebar from '../../components/AppSidebar';
+import MetaTags from '../../components/MetaTags';
 import { useAppToast, useEthers } from 'hooks/index';
 import getHiddenVersion from 'utils/getHiddenName';
 import { useEthersStore } from 'stores/ethersStore';

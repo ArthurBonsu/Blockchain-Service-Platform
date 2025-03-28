@@ -1,1 +1,1 @@
-export { default } from './PortfolioContract'
+export { default } from './Portfolio'

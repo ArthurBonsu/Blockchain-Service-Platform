@@ -3,7 +3,7 @@ import { Button, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalF
 import useDaoContext from '../../contexts/useDaoContext';
 import { useSafeContext } from '../../contexts/useSafeContext';
 import useTransactionContext from '../../contexts/useTransactionContext';
-import { PaymentTransactions } from 'types';
+import { PaymentTransactions } from 'types/index';
 import { useSafeStore } from '../../stores/safeStore';
 import { useTransactionStore } from '../../stores/transactionStore';
 import { useEthersStore } from '../../stores/ethersStore';
@@ -129,54 +129,58 @@ const DAO: React.FC<PaymentTransactions> = ({ ...rest }) => {
     }
   };
 
-  const handleSendDaoTransaction = async () => {
-    if (!receipient || !amount) return;
+  // Inside your handleSendDaoTransaction function, modify the transactionData object:
+
+const handleSendDaoTransaction = async () => {
+  if (!receipient || !amount) return;
+  
+  try {
+    const transactionData = {
+      data: null,
+      // Fix: Convert the array to a string if it's an array
+      username: Array.isArray(ownersAddress) ? ownersAddress[0] : ownersAddress,
+      address: receipient,
+      amount: parseFloat(amount),
+      comment: comment,
+      timestamp: new Date(),
+      receipient: receipient,
+      receipients: receipients || [],
+      txhash: '',
+      USDprice: USDprice ? parseFloat(USDprice) : 0,
+      paymenthash: paymenthash || '',
+      // Fix: owneraddress should be a string, not an array
+      owneraddress: Array.isArray(ownersAddress) ? ownersAddress[0] : ownersAddress,
+    };
     
-    try {
-      const transactionData = {
-        data: null,
-        username: ownersAddress,
-        address: receipient,
-        amount: parseFloat(amount),
-        comment: comment,
-        timestamp: new Date(),
-        receipient: receipient,
-        receipients: receipients || [],
-        txhash: '',
-        USDprice: USDprice ? parseFloat(USDprice) : 0,
-        paymenthash: paymenthash || '',
-        owneraddress: ownersAddress,
-      };
-      
-      const daoData = {
-        title: proposalTitle || 'Payment Transaction',
-        description: proposalDescription || `Payment of ${amount} ETH to ${receipient}`,
-        personName: ownersAddress,
-      };
-      
-      const safeInfo = {
-        address: safeAddress,
-        nonce: 0,
-        threshold: 1,
-        owners: ownersAddress,
-        masterCopy: '',
-        modules: [],
-        fallbackHandler: '',
-        guard: '',
-        version: '1.0'
-      };
-      
-      await sendDaoTransaction(transactionData, daoData, safeInfo);
-      sendPaymentModal.onClose();
-      
-      // Reset fields
-      setAmount('');
-      setReceipient('');
-      setComment('');
-    } catch (error) {
-      console.error("Error sending DAO transaction:", error);
-    }
-  };
+    const daoData = {
+      title: proposalTitle || 'Payment Transaction',
+      description: proposalDescription || `Payment of ${amount} ETH to ${receipient}`,
+      personName: Array.isArray(ownersAddress) ? ownersAddress[0] : ownersAddress,
+    };
+    
+    const safeInfo = {
+      address: safeAddress,
+      nonce: 0,
+      threshold: 1,
+      owners: ownersAddress,
+      masterCopy: '',
+      modules: [],
+      fallbackHandler: '',
+      guard: '',
+      version: '1.0'
+    };
+    
+    await sendDaoTransaction(transactionData, daoData, safeInfo);
+    sendPaymentModal.onClose();
+    
+    // Reset fields
+    setAmount('');
+    setReceipient('');
+    setComment('');
+  } catch (error) {
+    console.error("Error sending DAO transaction:", error);
+  }
+};
 
   // Effect to check wallet connection on mount
   useEffect(() => {

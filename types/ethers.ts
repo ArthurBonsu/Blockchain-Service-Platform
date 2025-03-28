@@ -63,16 +63,16 @@ export interface SwapNewTokenTransaction{
 }
 
 
-export  interface TransactionDisplayProps {
-  account: string; // replace with the actual type
-  username: string; // replace with the actual type
-  paymenthash: string; // replace with the actual type
-  receipients: string[]; // replace with the actual type
-  contractowneraddress: string; // replace with the actual type
-  amount: number; // replace with the actual type
-  usdPrice: number; // replace with the actual type
+export interface TransactionDisplayProps {
+  account: string;        // Wallet address of the current user
+  username: string;       // Username associated with the transaction
+  paymenthash: string;    // Hash of the payment transaction
+  receipients: string[];  // List of recipient addresses
+  contractowneraddress: string; // Address of the contract owner
+  owneraddress?: string;  // Optional owner address for additional flexibility
+  amount: number;         // Amount of tokens/currency in the transaction
+  usdPrice: number;       // USD price of the transaction
 }
-
 
 export interface ServiceProps{
   color: string,
