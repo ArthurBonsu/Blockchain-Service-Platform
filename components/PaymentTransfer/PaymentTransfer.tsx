@@ -11,6 +11,7 @@ import * as yup from "yup";
 import React from 'react';
 import useTransactionContext from 'contexts/useTransactionContext';
 import { TransactionDisplayProps } from '@/types/ethers';
+import { PaymentTransactions } from '@/types';
 
 interface PaymentTransferProps {
   username: string; 
@@ -27,7 +28,7 @@ interface PaymentTransferProps {
   onPayTransfer: () => void;
 }
 
-// Define form data type with explicit receipients array
+// Go back to the original definition
 interface PaymentFormData {
   username: string;
   address: string;
@@ -35,11 +36,12 @@ interface PaymentFormData {
   comment: string;
   timestamp: Date;
   receipient: string;
-  receipients: string[];
+  receipients: string[]; 
   txhash?: string;
   USDprice: number;
   paymenthash: string;
   owneraddress: string;
+  contractowneraddress: string; // Add this field
 }
 
 const pathname = "/SimpleTransfer";
@@ -88,7 +90,12 @@ const TransactionDisplay: React.FC<TransactionDisplayProps> = ({
           </Box>
           
           <Flex justify="space-between">
-            <Text fontWeight="bold">Owner Address:</Text>
+            <Text fontWeight="bold"> Owner Address:</Text>
+            <Text>{owneraddress}</Text>
+          </Flex>
+          
+          <Flex justify="space-between">
+            <Text fontWeight="bold">Contract Owner Address:</Text>
             <Text>{contractowneraddress}</Text>
           </Flex>
           
@@ -129,11 +136,27 @@ const PaymentTransfer: FC<PaymentTransferProps> = ({
   const [openMultiRecipient, setMultiReceipient] = useState(false);
   const [paymentcompleted, setPaymentcompleted] = useState(false);
 
-  // Initialize form with correct typing for receipients
+  // Update the validation schema accordingly
+  const paymentFormSchema = yup.object().shape({
+    username: yup.string().required('Username is required'),
+    address: yup.string().required('Address is required'),
+    amount: yup.number().required('Amount is required').positive('Amount must be positive'),
+    comment: yup.string(),
+    timestamp: yup.date().default(() => new Date()),
+    receipient: yup.string(),
+    receipients: yup.array().of(yup.string()),
+    USDprice: yup.number().default(0),
+    paymenthash: yup.string(),
+    owneraddress: yup.string(),
+    contractowneraddress: yup.string() // Add validation for this field
+  });
+
+  // Move the useForm hook inside the component
   const {
     control,
     register,
     handleSubmit,
+    watch, // Add watch here
     formState: { isSubmitting, errors },
   } = useForm<PaymentFormData>({
     resolver: yupResolver(paymentFormSchema),
@@ -147,15 +170,18 @@ const PaymentTransfer: FC<PaymentTransferProps> = ({
       receipients: [],
       USDprice: USDprice || 0,
       paymenthash: '',
-      owneraddress: ''
+      owneraddress: '',
+      contractowneraddress: '' // Initialize this
     }
   });
-  
-  // Now with correct typing on PaymentFormData
-  const { fields, append, remove } = useFieldArray<PaymentFormData>({
+
+  // Update the useFieldArray call
+  // When using useFieldArray with string arrays
+  const { fields, append, remove } = useFieldArray({
     control,
-    name: 'receipients'
+    name: 'receipients' as never // Type assertion to make TypeScript happy
   });
+
   // Check if payment is completed when component mounts or when isPaid changes
   useEffect(() => {
     if (isPaid) {
@@ -163,16 +189,17 @@ const PaymentTransfer: FC<PaymentTransferProps> = ({
     }
   }, [isPaid]);
 
-  // Update the payment data when it changes
+  // Update the useEffect dependency array
   useEffect(() => {
     if (onPayTransfer) {
       onPayTransfer();
     }
-  }, [PaymentformData.username, PaymentformData.contractaddress, PaymentformData.amount, onPayTransfer]);
+  }, [PaymentformData.username, PaymentformData.address, PaymentformData.amount, onPayTransfer]);
 
-  // Toggle multi-recipient input
+  // Update the append function
   const onMultiReceipientOpen = () => {
     setMultiReceipient(!openMultiRecipient);
+    append(''); // Now we can append strings
   };
 
   // Navigate to SimpleTransfer page
@@ -180,11 +207,31 @@ const PaymentTransfer: FC<PaymentTransferProps> = ({
     router.push(pathname);
   };
 
-  // Handle form submission
+  // Update the onSubmitPayment function
   const onSubmitPayment = async (data: PaymentFormData) => {
     try {
-      // Send payment
-      await sendPayment(data);
+      // Destructure to separate contractowneraddress from the data to be sent
+      const { contractowneraddress, ...paymentDataFields } = data;
+      
+      // Create a payment transaction object that matches the PaymentTransactions type
+      const paymentTransaction: PaymentTransactions = {
+        username: paymentDataFields.username,
+        address: paymentDataFields.address,
+        amount: paymentDataFields.amount,
+        comment: paymentDataFields.comment,
+        timestamp: paymentDataFields.timestamp,
+        receipient: paymentDataFields.receipient,
+        receipients: paymentDataFields.receipients,
+        txhash: paymentDataFields.txhash || '',
+        USDprice: paymentDataFields.USDprice,
+        paymenthash: paymentDataFields.paymenthash,
+        owneraddress: paymentDataFields.owneraddress,
+        data: {}, // Add this as it's required by the PaymentTransactions type
+        status: 'pending' // Add a default status
+      };
+      
+      // Send only the necessary payment data that matches the PaymentTransactions type
+      await sendPayment(paymentTransaction);
       setPaymentcompleted(true);
     } catch (error) {
       console.error("Payment failed:", error);
@@ -280,6 +327,10 @@ const PaymentTransfer: FC<PaymentTransferProps> = ({
                 <InputGroup>
                   <Input placeholder='Owner Address' {...register("owneraddress")} bg="white" />
                 </InputGroup>
+                
+                <InputGroup>
+                  <Input placeholder='Contract Owner Address' {...register("contractowneraddress")} bg="white" />
+                </InputGroup>
               </Stack>
             </FormControl>
           </Flex>
@@ -311,12 +362,14 @@ const PaymentTransfer: FC<PaymentTransferProps> = ({
         </form>
         
         <Box mt={6}>
+          {/* Use watch to get current form value */}
           <TransactionDisplay 
             account={currentAccount}
             username={PaymentformData.username || 'Nothing yet'}
             paymenthash={PaymentformData.paymenthash || 'Nothing yet'}
             receipients={PaymentformData.receipients || ['Nothing yet']}
-            contractowneraddress={PaymentformData.owneraddress || 'Nothing yet'}
+            contractowneraddress={watch('contractowneraddress') || 'Nothing yet'}
+            owneraddress={PaymentformData.owneraddress || 'Nothing yet'}
             amount={Number(PaymentformData.amount) || 0}
             usdPrice={Number(PaymentformData.USDprice) || 0}
           />

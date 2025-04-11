@@ -29,7 +29,7 @@ import * as yup from 'yup';
 import AppAlertDialog from '../../components/AppAlertDialog';
 import { useSafeContext } from '../../contexts/useSafeContext';
 import { useSwapContext } from 'contexts/useSwapContext';
-
+import { PaymentTransactions } from '@/types';
 // Combined props
 interface SwapTransferProps {
   onSwapComplete?: (txHash: string) => void;
@@ -203,25 +203,23 @@ const SwapTransfer: FC<SwapTransferProps> = ({
       });
       return;
     }
-    
     setIsRejectLoading(true);
     setRejectError(null);
-    
     try {
-      const actualSafeAddress = safeAddress || '';
-      
-      await rejectTransfer({
-        safeAddress: actualSafeAddress,
-        transaction: {
-          txhash: swapResult.hash,
-          nonce,
-          hashtxn: hashTxn
-        },
-        execTxn,
-        nonce,
-        hashtxn: hashTxn
-      });
-      
+      const paymentTransaction: PaymentTransactions = {
+        data: {},
+        username: '',
+        address: '',
+        amount: 0,
+        comment: '',
+        timestamp: new Date(),
+        receipient: '',
+        txhash: swapResult.hash,
+        USDprice: 0,
+        paymenthash: '',
+        owneraddress: '',
+      };
+      await rejectTransfer(paymentTransaction);
       toast({
         title: "Transaction Rejected",
         description: "The transaction has been successfully rejected",
@@ -229,17 +227,14 @@ const SwapTransfer: FC<SwapTransferProps> = ({
         duration: 5000,
         isClosable: true,
       });
-      
       if (onRejectComplete) {
         onRejectComplete();
       }
-      
       // Reset swap result after rejection
       setSwapResult(null);
     } catch (err) {
       console.error("Error rejecting transfer:", err);
       setRejectError("Failed to reject the transaction. Please try again.");
-      
       toast({
         title: "Rejection Failed",
         description: "There was an error rejecting the transaction",
@@ -254,15 +249,11 @@ const SwapTransfer: FC<SwapTransferProps> = ({
   }, [
     swapResult,
     rejectTransfer,
-    safeAddress,
-    execTxn,
-    nonce,
-    hashTxn,
     toast,
     onRejectComplete,
-    rejectDialogDisclosure
+    rejectDialogDisclosure,
   ]);
-
+  
   // Check if reject button should be disabled
   const isRejectButtonDisabled = !swapResult?.hash || !currentAccount;
 
@@ -448,7 +439,7 @@ const SwapTransfer: FC<SwapTransferProps> = ({
           <>
             This action will reject transaction #{nonce}. 
             A separate transaction will be performed to submit the rejection.
-            {rejectError && <div style={{ color: 'red', marginTop: '10px' }}>{rejectError}</div>}
+          
           </>
         }
         disclosure={rejectDialogDisclosure}

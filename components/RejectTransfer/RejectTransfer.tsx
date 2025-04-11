@@ -36,17 +36,12 @@ const RejectTransfer: FC<RejectTransferProps> = ({
     setIsLoading(true);
     try {
       // Call reject transfer method from SafeContext
-      await rejectTransfer({
-        safeAddress,
-        transaction,
-        // Add any additional parameters required by the context method
-        userAddress
-      });
+     await rejectTransfer(transaction);
       
       // Update transaction status
-      const updatedTransaction = {
+      const updatedTransaction: PaymentTransactions = {
         ...transaction,
-        status: 'rejected'
+        status: 'rejected' as 'rejected' | 'pending' | 'approved' | 'complete'
       };
       
       // Update in global store

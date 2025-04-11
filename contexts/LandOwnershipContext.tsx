@@ -1,6 +1,7 @@
 // contexts/LandOwnershipContext.tsx
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ethers } from 'ethers';
+import LandOwnershipABI from '../build/contracts/LandOwnership.json';
 
 // Interfaces for type safety
 interface LandDetails {
@@ -67,41 +68,84 @@ export const LandOwnershipProvider: React.FC<{ children: React.ReactNode }> = ({
   const [transactions, setTransactions] = useState<any[]>([]);
 
   // Ethereum Contract Setup
-  const createEthereumContract = async () => {
-    const { ethereum } = window;
-    if (!ethereum) throw new Error('Ethereum object not found');
+ // In your createEthereumContract method
+const createEthereumContract = async () => {
+  const { ethereum } = window;
+  if (!ethereum) throw new Error('Ethereum object not found');
 
-    const provider = new ethers.providers.Web3Provider(ethereum);
-    const signer = provider.getSigner();
-    
-    // TODO: Replace with actual contract ABI and address
-    const contractABI = []; // Your contract ABI
-    const contractAddress = ''; // Your contract address
-    
-    return new ethers.Contract(contractAddress, contractABI, signer);
-  };
+  const provider = new ethers.providers.Web3Provider(ethereum);
+  const signer = provider.getSigner();
+  
+  // Import the contract ABI and address from a configuration file or environment variable
+  const contractAddress = process.env.NEXT_PUBLIC_LAND_OWNERSHIP_CONTRACT_ADDRESS || '';
+  
+  return new ethers.Contract(
+    contractAddress, 
+    LandOwnershipABI.abi, // Use the ABI from the imported JSON
+    signer
+  );
+};
 
   // Wallet Connection
-  const connectWallet = async () => {
-    try {
-      const { ethereum } = window;
-      if (!ethereum) {
-        alert('Please install MetaMask!');
-        return;
-      }
+// Wallet Connection
+const connectWallet = async () => {
+  try {
+    // Safely check for ethereum object
+    const { ethereum } = window as any;
+    
+    if (!ethereum) {
+      throw new Error('Please install MetaMask!');
+    }
 
+    // Type guard to ensure ethereum is not undefined
+    if (ethereum && ethereum.request) {
       const accounts = await ethereum.request({
         method: 'eth_requestAccounts',
       });
 
-      setCurrentAccount(accounts[0]);
-      window.location.reload();
+      if (Array.isArray(accounts) && accounts.length > 0) {
+        setCurrentAccount(accounts[0]);
+        window.location.reload();
+      } else {
+        throw new Error('No accounts found');
+      }
+    } else {
+      throw new Error('Ethereum provider not available');
+    }
+  } catch (error) {
+    console.error(error);
+    
+    // Provide user-friendly error handling
+    alert(
+      error instanceof Error 
+        ? error.message 
+        : 'Failed to connect wallet. Please try again.'
+    );
+  }
+};
+
+// Modify the initial connection check similarly
+useEffect(() => {
+  const checkWalletConnection = async () => {
+    try {
+      const { ethereum } = window as any;
+      
+      // Comprehensive null and undefined checks
+      if (ethereum && ethereum.request) {
+        const accounts = await ethereum.request({ method: 'eth_accounts' });
+        
+        if (Array.isArray(accounts) && accounts.length > 0) {
+          setCurrentAccount(accounts[0]);
+          await getAllLands();
+        }
+      }
     } catch (error) {
-      console.error(error);
-      throw new Error('No ethereum object');
+      console.error('Wallet connection check failed:', error);
     }
   };
 
+  checkWalletConnection();
+}, []);
   // Land Registration
   const registerLand = async (landDetails: LandDetails): Promise<string> => {
     try {
@@ -307,25 +351,35 @@ export const LandOwnershipProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   // Initialize Wallet Connection
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      try {
-        const { ethereum } = window;
-        if (!ethereum) return;
-
-        const accounts = await ethereum.request({ method: 'eth_accounts' });
-        if (accounts.length) {
-          setCurrentAccount(accounts[0]);
-          await getAllLands();
+ // Initial wallet connection check
+useEffect(() => {
+  const checkWalletConnection = async () => {
+    try {
+      // Use type assertion to handle window.ethereum
+      const { ethereum } = window as any;
+      
+      // Comprehensive null check with optional chaining
+      if (ethereum?.request) {
+        try {
+          const accounts = await ethereum.request({ method: 'eth_accounts' });
+          
+          // Validate accounts array
+          if (Array.isArray(accounts) && accounts.length > 0) {
+            setCurrentAccount(accounts[0]);
+            await getAllLands();
+          }
+        } catch (requestError) {
+          console.error('Error requesting accounts:', requestError);
         }
-      } catch (error) {
-        console.error(error);
       }
-    };
+    } catch (error) {
+      console.error('Wallet connection check failed:', error);
+    }
+  };
 
-    checkWalletConnection();
-  }, []);
-
+  // Use IIFE if you need to use async in useEffect
+  checkWalletConnection();
+}, []); 
   // Context Value
   const contextValue: LandOwnershipContextType = {
     currentAccount,

@@ -15,7 +15,9 @@ import {
 } from '@chakra-ui/react';
 import { useForm } from 'react-hook-form';
 import { useSafeContext } from '../../contexts/useSafeContext';
-import { isAddress } from 'ethers';
+// Option 1: Use utils method
+import { utils } from 'ethers';
+
 
 type FormData = {
   ownerAddress: string;
@@ -81,9 +83,11 @@ const AddSafeOwners: React.FC = () => {
   const handleAddOwner = async (data: FormData) => {
     try {
       // Validate Ethereum address
-      if (!isAddress(data.ownerAddress)) {
-        throw new Error('Invalid Ethereum address');
-      }
+      register('ownerAddress', {
+        required: 'Owner address is required',
+        validate: (value) => 
+          utils.isAddress(value) || 'Invalid Ethereum address'
+      })
 
       // Set pending add owner state
       setPendingAddOwnerData({
@@ -142,11 +146,13 @@ const AddSafeOwners: React.FC = () => {
             <FormControl isInvalid={!!errors.ownerAddress}>
               <FormLabel>Owner Wallet Address</FormLabel>
               <Input
-                {...register('ownerAddress', {
+              {
+                ...register('ownerAddress', {
                   required: 'Owner address is required',
                   validate: (value) => 
-                  isAddress(value) || 'Invalid Ethereum address'
-                })}
+                    utils.isAddress(value) || 'Invalid Ethereum address'
+                })
+              }
                 placeholder="Enter owner's wallet address"
               />
               {errors.ownerAddress && (

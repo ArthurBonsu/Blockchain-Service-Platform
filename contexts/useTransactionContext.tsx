@@ -79,6 +79,7 @@ interface SendTransactionProps {
 interface TransactionContextType {
   // General transaction state
   transactions: Transaction[];
+  getTransactions: () => Promise<PaymentTransactions[]>;
   blockchainTransactions: BlockchainTransaction[];
   currentAccount: string;
   isLoading: boolean;
@@ -127,7 +128,7 @@ const getContractConfig = () => {
   const transactionContractAddress = process.env.NEXT_PUBLIC_TRANSACTION_CONTRACT_ADDRESS || "";
   
   // Token swap contract config
-  const tokenSwapContractABI = [
+  const tokenSwapContractABI: never[] = [
     // Add token swap contract ABI here
   ];
   const tokenSwapContractAddress = process.env.NEXT_PUBLIC_TOKEN_SWAP_CONTRACT_ADDRESS || "";
@@ -253,6 +254,30 @@ export const TransactionProvider: React.FC<PropsWithChildren> = ({ children }) =
     };
   }, [ethereum, tokenSwapContractABI, tokenSwapContractAddress]);
   
+  // Add this function to your TransactionProvider
+// Move the getTransactions function definition after getAllTransactions
+const getTransactions = useCallback(async (): Promise<PaymentTransactions[]> => {
+  try {
+    if (!ethereum || !currentAccount) return [];
+    
+    // First update the internal state
+    await getAllTransactions();
+    
+    // Then return a formatted version of the transactions
+    return blockchainTransactions.map(tx => ({
+      address: tx.addressFrom,
+      receipient: tx.addressTo,
+      amount: Number(tx.amount),
+      comment: tx.message,
+      timestamp: new Date(Number(tx.timestamp.toString()) * 1000),
+      txhash: '', // You might need to add this from your transaction data
+      owneraddress: tx.sender || tx.addressFrom,
+    }));
+  } catch (error) {
+    console.error("Error getting transactions:", error);
+    return [];
+  }
+}, [ethereum, currentAccount, blockchainTransactions]);
   // Request account access
   const requestAccount = useCallback(async () => {
     try {
@@ -589,35 +614,35 @@ export const TransactionProvider: React.FC<PropsWithChildren> = ({ children }) =
     checkIfTransactionsExist();
   }, [checkIfWalletIsConnected, checkIfTransactionsExist]);
 
-  // Context value
-  const value = {
-    transactions,
-    blockchainTransactions,
-    currentAccount,
-    isLoading,
-    transactionCount,
-    formData,
-    PaymentformData,
-    transferformData,
-    paymentTransactionReceipt,
-    transferTransaction,
-    tokenTxReceipt,
-    isPaid,
-    transferredTokenAmount,
-    paidTokenAmount,
-    ourUSDPrice,
-    tokentxhash,
-    handleChange,
-    connectWallet,
-    sendTransaction,
-    sendTokenTransaction,
-    sendPayment,
-    sendSimpleTransfer,
-    getAllTransactions,
-    addTransaction,
-    clearTransactions
-  };
-
+// Context value
+const value = {
+  transactions,
+  blockchainTransactions,
+  currentAccount,
+  isLoading,
+  transactionCount,
+  formData,
+  PaymentformData,
+  transferformData,
+  paymentTransactionReceipt,
+  transferTransaction,
+  tokenTxReceipt,
+  isPaid,
+  transferredTokenAmount,
+  paidTokenAmount,
+  ourUSDPrice,
+  tokentxhash,
+  handleChange,
+  connectWallet,
+  sendTransaction,
+  sendTokenTransaction,
+  sendPayment,
+  sendSimpleTransfer,
+  getAllTransactions,
+  addTransaction,
+  clearTransactions,
+  getTransactions // Add this function to the context value
+};
   return (
     <TransactionContext.Provider value={value}>
       {children}

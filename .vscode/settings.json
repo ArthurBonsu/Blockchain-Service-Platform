@@ -2,6 +2,7 @@
 {
     "python.pythonPath": "~/AppData/Local/Programs/Python/Python313/python.exe",
     "cSpell.words": [
+        "contractowneraddress",
         "ngeohash"
     ]
 } 

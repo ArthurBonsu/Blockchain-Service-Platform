@@ -185,14 +185,41 @@ const handleSendDaoTransaction = async () => {
   // Effect to check wallet connection on mount
   useEffect(() => {
     const checkConnection = async () => {
-      if (window.ethereum && window.ethereum.selectedAddress) {
-        setIsConnected(true);
-      } else {
+      try {
+        // Use the eth_accounts method to check connected accounts
+        const { ethereum } = window as any;
+        
+        if (ethereum) {
+          const accounts = await ethereum.request({ method: 'eth_accounts' });
+          
+          // Check if there are any connected accounts
+          setIsConnected(accounts.length > 0);
+          
+          // Optionally set the current account if available
+          if (accounts.length > 0) {
+            // You might want to sync this with your currentAccount state from context
+            // setCurrentAccount(accounts[0]);
+          }
+        } else {
+          setIsConnected(false);
+        }
+      } catch (error) {
+        console.error('Error checking wallet connection:', error);
         setIsConnected(false);
       }
     };
     
     checkConnection();
+    
+    // Optional: Add event listener for account changes
+    const { ethereum } = window as any;
+    if (ethereum) {
+      ethereum.on('accountsChanged', checkConnection);
+      
+      return () => {
+        ethereum.removeListener('accountsChanged', checkConnection);
+      };
+    } 
   }, []);
 
   return (

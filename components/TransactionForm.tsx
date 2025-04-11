@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSafeContext } from '../contexts/useSafeContext';
 import { Logger } from '../utils/logger';
+import { ethers } from 'ethers';
+import { PaymentTransactions } from '@/types';
 
 const TransactionForm: React.FC = () => {
   // Use SafeContext instead of blockchain-specific contexts
@@ -102,18 +104,7 @@ const TransactionForm: React.FC = () => {
       const processingTime = endTime - startTime;
 
       // Optionally propose the transaction
-      await proposeTransaction(
-        '', // safeAddress
-        transactionData, 
-        {
-          safeAddress: '',
-          transaction: transactionData,
-          ownersAddress: [],
-          safeContractAddress: '',
-          threshold: 0,
-          ownerInfo: []
-        }
-      );
+      await proposeTransaction(transactionData as PaymentTransactions);
 
       setResult(transactionResult);
       setFormData({ city: '', date: '', sector: '', ktCO2: '' }); // Clear form

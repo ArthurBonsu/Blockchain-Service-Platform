@@ -1,24 +1,3 @@
-getTransactionDetails: async () => {},
-    sendSafeTransaction: async () => {},
-    checkIsSigned: async () => {},
-    checkIfTxnExecutable: async () => false,
-    proposeTransaction: async () => {},
-    approveTransfer: async () => {},
-    rejectTransfer: async () => {},
-    executeTransaction: async () => {},
-    executeSafeTransaction: async () => {},
-    updateTransactionStatus: async () => {},
-    updateTransactionStatusHere: async () => {}
-  };
-
-  return (
-    <SafeContext.Provider value={contextValue}>
-      {children}
-    </SafeContext.Provider>
-  );
-};
-
-export default SafeContextProvider;
 import React, { 
   createContext, 
   useContext,
@@ -27,7 +6,7 @@ import React, {
   useCallback, 
   PropsWithChildren 
 } from "react";
-import { ethers, BigNumberish } from 'ethers';
+import { ethers } from 'ethers';
 import { Web3Provider } from '@ethersproject/providers';
 import { BlockchainTransaction } from "types/ethers";
 import { PaymentTransactions } from "types";
@@ -35,7 +14,7 @@ import { useSafeStore } from 'stores/safeStore';
 import { useEthersStore } from "stores/ethersStore";
 import { useWalletStore } from 'stores/ContextStores/walletStore';
 
-// Interfaces (keeping original interfaces)
+// Interfaces
 export interface SafeInfoParam {
   ownersAddress: string[];
   safeContractAddress: string;
@@ -58,9 +37,9 @@ export interface ExecuteTransParam {
   ownerInfo: any[];
 }
 
-// Comprehensive SafeContextType interface
+// SafeContext type definition
 interface SafeContextType {
-  // Safe state
+  // State
   safeAddress: string;
   ownersAddress: string[];
   safeContractAddress: string;
@@ -85,7 +64,7 @@ interface SafeContextType {
   };
   error: string | null;
 
-  // Methods
+  // Setters
   setSafeAddress: (safeAddress: string) => void;
   setOwnersAddress: (ownersAddress: string[]) => void;
   setSafeContractAddress: (safeContractAddress: string) => void;
@@ -130,7 +109,7 @@ interface SafeContextType {
   sendSafeTransaction: (transactionData: any) => Promise<void>;
   checkIsSigned: (transactionHash: string) => Promise<void>;
   checkIfTxnExecutable: (transaction: PaymentTransactions) => Promise<boolean>;
-  proposeTransaction: (safeAddress: string, transaction: PaymentTransactions, executeTransParam: ExecuteTransParam) => Promise<any>;
+  proposeTransaction: (transaction: PaymentTransactions) => Promise<any>;
   approveTransfer: (transaction: PaymentTransactions) => Promise<any>;
   rejectTransfer: (transaction: PaymentTransactions) => Promise<any>;
   executeTransaction: (executeTransParam: ExecuteTransParam) => Promise<any>;
@@ -139,7 +118,7 @@ interface SafeContextType {
   updateTransactionStatusHere: (params: { safeAddress: string; transactionHash: string; status: string }) => Promise<any>;
 }
 
-// Create the context
+// Create context
 const SafeContext = createContext<SafeContextType | null>(null);
 
 // Custom hook to use the SafeContext
@@ -246,7 +225,154 @@ export const SafeContextProvider: React.FC<PropsWithChildren<{}>> = ({ children 
     throw new Error("Ethereum provider not available");
   }, []);
 
-  // Placeholder implementations of methods
+
+  // Update transaction status
+  const updateTransactionStatus = useCallback(async (transaction: PaymentTransactions, status: string) => {
+    try {
+      setIsLoading(true);
+      
+      // Update status in local state
+      setTransactionStatus(prev => ({
+        ...prev,
+        [transaction.txhash]: status
+      }));
+      
+      // In a real implementation, you would update the status on-chain here
+      console.log(`Updating transaction ${transaction.txhash} status to ${status}`);
+      
+      // Return success
+      return { success: true, status };
+    } catch (error) {
+      console.error('Error updating transaction status:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update transaction status');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Propose transaction implementation
+  const proposeTransaction = useCallback(async (transaction: PaymentTransactions) => {
+    try {
+      setIsLoading(true);
+      
+      // Log the transaction
+      console.log('Proposing transaction:', transaction);
+      
+      // In a real implementation, you would make a blockchain call here
+      // For now, we'll simulate a successful transaction proposal
+      
+      // Update transaction with a pending status if not already set
+      const transactionWithStatus = {
+        ...transaction,
+        status: transaction.status || 'pending'
+      };
+      
+      // Add to transactions list
+      setTransactions(prev => [...prev, transactionWithStatus as unknown as BlockchainTransaction]);
+      
+      // Update transaction status
+      await updateTransactionStatus(transactionWithStatus, 'pending');
+      
+      return transactionWithStatus;
+    } catch (error) {
+      console.error('Error proposing transaction:', error);
+      setError(error instanceof Error ? error.message : 'Failed to propose transaction');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [updateTransactionStatus]);
+
+  // Approve transfer implementation
+  const approveTransfer = useCallback(async (transaction: PaymentTransactions) => {
+    try {
+      setIsLoading(true);
+      
+      // Log the transaction
+      console.log('Approving transaction:', transaction);
+      
+      // In a real implementation, you would make a blockchain call here
+      // For now, we'll simulate a successful approval
+      
+      // Update transaction status
+      await updateTransactionStatus(transaction, 'approved');
+      
+      return { success: true, transaction };
+    } catch (error) {
+      console.error('Error approving transaction:', error);
+      setError(error instanceof Error ? error.message : 'Failed to approve transaction');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [updateTransactionStatus]);
+
+  // Reject transfer implementation
+  const rejectTransfer = useCallback(async (transaction: PaymentTransactions) => {
+    try {
+      setIsLoading(true);
+      
+      // Log the transaction
+      console.log('Rejecting transaction:', transaction);
+      
+      // In a real implementation, you would make a blockchain call here
+      // For now, we'll simulate a successful rejection
+      
+      // Update transaction status
+      await updateTransactionStatus(transaction, 'rejected');
+      
+      return { success: true, transaction };
+    } catch (error) {
+      console.error('Error rejecting transaction:', error);
+      setError(error instanceof Error ? error.message : 'Failed to reject transaction');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [updateTransactionStatus]);
+
+  // Execute transaction implementation
+  const executeTransaction = useCallback(async (executeTransParam: ExecuteTransParam) => {
+    try {
+      setIsLoading(true);
+      
+      // Log the execution parameters
+      console.log('Executing transaction:', executeTransParam);
+      
+      // In a real implementation, you would make a blockchain call here
+      // For now, we'll simulate a successful execution
+      
+      // Update transaction status
+      await updateTransactionStatus(executeTransParam.transaction, 'complete');
+      
+      return { success: true, transaction: executeTransParam.transaction };
+    } catch (error) {
+      console.error('Error executing transaction:', error);
+      setError(error instanceof Error ? error.message : 'Failed to execute transaction');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [updateTransactionStatus]);
+
+  // Check if transaction is executable
+  const checkIfTxnExecutable = useCallback(async (transaction: PaymentTransactions) => {
+    try {
+      // In a real implementation, you would check if the transaction has enough approvals
+      // For now, we'll simulate based on the transaction status
+      
+      // A transaction is executable if it's approved
+      return transaction.status === 'approved';
+    } catch (error) {      
+      console.error('Error checking if transaction is executable:', error);
+      setError(error instanceof Error ? error.message : 'Failed to check if transaction is executable');
+      throw error;
+    }
+  }, []);
+
+  
+  // Add owner implementation
   const addOwner = useCallback(async (newOwner: string) => {
     try {
       setIsPendingAddOwner(true);
@@ -272,6 +398,8 @@ export const SafeContextProvider: React.FC<PropsWithChildren<{}>> = ({ children 
           totalSteps: 2
         }
       });
+
+      return { success: true, ownersAddress: updatedOwners };
     } catch (error) {
       console.error('Error adding owner:', error);
       setError(error instanceof Error ? error.message : 'Failed to add owner');
@@ -279,8 +407,9 @@ export const SafeContextProvider: React.FC<PropsWithChildren<{}>> = ({ children 
     } finally {
       setIsPendingAddOwner(false);
     }
-  }, [ownersAddress, setOwnersAddress]);
+  }, [ownersAddress, setOwnersAddress, setIsPendingAddOwner, setPendingAddOwnerData]);
 
+  // Get safe info
   const getSafeInfoUsed = useCallback(async () => {
     try {
       // Placeholder implementation
@@ -326,58 +455,365 @@ export const SafeContextProvider: React.FC<PropsWithChildren<{}>> = ({ children 
     setIsPendingAddOwner,
     setPendingAddOwnerData,
 
-    // Placeholder methods (more to be implemented)
+    // Wallet connection methods
     connectWallet: async () => {
-      // Placeholder implementation
-      console.log('Connecting wallet');
-    },
-    checkIfWalletIsConnect: async () => {
-      // Placeholder implementation
-      console.log('Checking wallet connection');
-    },
-    checkIfTransactionsExists: async () => {
-      // Placeholder implementation
-      console.log('Checking transactions');
-    },
-    handleChange: (e, name) => {
-      // Placeholder implementation
-      setFormData(prev => ({...prev, [name]: e.target.value}));
+      try {
+        if (!ethereum) {
+          setError("Please install MetaMask to continue");
+          return;
+        }
+
+        const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+        setCurrentAccount(accounts[0]);
+        setAddress(accounts[0]);
+        
+        // Initialize other things as needed
+        console.log("Wallet connected:", accounts[0]);
+      } catch (error) {
+        console.error("Error connecting wallet:", error);
+        setError("Failed to connect wallet");
+        throw error;
+      }
     },
     
-    // Owner management
-    addOwner,
-    removeOwner: async () => {
-      // Placeholder implementation
-      console.log('Removing owner');
+    checkIfWalletIsConnect: async () => {
+      try {
+        if (!ethereum) {
+          setError("Please install MetaMask to continue");
+          return;
+        }
+
+        const accounts = await ethereum.request({ method: "eth_accounts" });
+        
+        if (accounts.length) {
+          setCurrentAccount(accounts[0]);
+          setAddress(accounts[0]);
+          console.log("Wallet is already connected:", accounts[0]);
+        }
+      } catch (error) {
+        console.error("Error checking wallet connection:", error);
+        setError("Failed to check wallet connection");
+        throw error;
+      }
     },
-    userAddToSafe: async () => {
-      // Placeholder implementation
-      console.log('Adding user to safe');
+    
+    checkIfTransactionsExists: async () => {
+      try {
+        if (!ethereum) return;
+        
+        // In a real implementation, you would check the blockchain for transactions
+        console.log("Checking for existing transactions");
+      } catch (error) {
+        console.error("Error checking transactions:", error);
+        throw error;
+      }
+    },
+    
+    handleChange: (e, name) => {
+      setFormData((prevState) => ({ ...prevState, [name]: e.target.value }));
+    },
+
+    // Safe management methods
+    setUpMultiSigSafeAddress: async (address) => {
+      try {
+        setIsLoading(true);
+        setIsPendingSafeCreation(true);
+        setPendingSafeData({
+          status: 'Setting up safe...',
+          progress: {
+            currentStep: 1,
+            totalSteps: 3
+          }
+        });
+        
+        // In a real implementation, you would create a multi-sig safe contract
+        console.log(`Setting up multi-sig safe at address: ${address}`);
+        
+        // Update safe address
+        setSafeAddress(address);
+        
+        setPendingSafeData({
+          status: 'Safe setup complete',
+          progress: {
+            currentStep: 3,
+            totalSteps: 3
+          }
+        });
+        
+        return address;
+      } catch (error) {
+        console.error('Error setting up multi-sig safe:', error);
+        setError(error instanceof Error ? error.message : 'Failed to set up multi-sig safe');
+        throw error;
+      } finally {
+        setIsLoading(false);
+        setIsPendingSafeCreation(false);
+      }
+    },
+    
+    addAddressToSafe: async (safeAddress, newAddress) => {
+      try {
+        setIsLoading(true);
+        
+        // In a real implementation, you would add the address to the safe contract
+        console.log(`Adding address ${newAddress} to safe ${safeAddress}`);
+        
+        // Update owners list
+        const updatedOwners = [...ownersAddress, newAddress];
+        setOwnersAddress(updatedOwners);
+        
+        return updatedOwners;
+      } catch (error) {
+        console.error('Error adding address to safe:', error);
+        setError(error instanceof Error ? error.message : 'Failed to add address to safe');
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    
+    addOwner,
+    
+    removeOwner: async (ownerToRemove) => {
+      try {
+        setIsLoading(true);
+        
+        // In a real implementation, you would remove the owner from the safe contract
+        console.log(`Removing owner ${ownerToRemove}`);
+        
+        // Update owners list
+        const updatedOwners = ownersAddress.filter(owner => owner !== ownerToRemove);
+        setOwnersAddress(updatedOwners);
+        
+        return { success: true, ownersAddress: updatedOwners };
+      } catch (error) {
+        console.error('Error removing owner:', error);
+        setError(error instanceof Error ? error.message : 'Failed to remove owner');
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    
+    updateThreshold: async (newThreshold) => {
+      try {
+        setIsLoading(true);
+        
+        // In a real implementation, you would update the threshold in the safe contract
+        console.log(`Updating threshold to ${newThreshold}`);
+        
+        return { success: true, threshold: newThreshold };
+      } catch (error) {
+        console.error('Error updating threshold:', error);
+        setError(error instanceof Error ? error.message : 'Failed to update threshold');
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    
+    userAddToSafe: async (userAddress) => {
+      // Placeholder
+      return { success: true };
     },
 
     // Safe info methods
-    getSafeInfoUsed,
+    getSafeInfo: async (safeInfoParam) => {
+      try {
+        setIsLoading(true);
+        
+        // In a real implementation, you would get info from the safe contract
+        console.log('Getting safe info:', safeInfoParam);
+        
+        return {
+          safeAddress: safeInfoParam.safeAddress,
+          ownersAddress: safeInfoParam.ownersAddress,
+          threshold: safeInfoParam.threshold,
+          ownerInfo: safeInfoParam.ownerInfo
+        };
+      } catch (error) {
+        console.error('Error getting safe info:', error);
+        setError(error instanceof Error ? error.message : 'Failed to get safe info');
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    
     getSafeDetails: () => ({
       safeAddress,
       ownersAddress,
       safeContractAddress
     }),
+    
     getPendingSafeData: () => pendingSafeData,
     getPendingAddOwnerData: () => pendingAddOwnerData,
+    getSafeInfoUsed,
+    
 
-    // Other methods (placeholders)
-    setUpMultiSigSafeAddress: async () => '',
-    addAddressToSafe: async () => [],
-    updateThreshold: async () => {},
-    getOwners: async () => [],
-    getOwnerDetails: async () => {},
-    getTransactionCount: async () => {},
-    getUserTransactions: async () => [],
-    getSafeOwners: async () => [],
-    isOwnerAddress: async () => false,
-    getTotalWeight: async () => {},
-    getThreshold: async () => {},
+    
+    getOwners: async (params) => {
+      try {
+        setIsLoading(true);
+        
+        // In a real implementation, you would get owners from the safe contract
+        console.log('Getting owners for safe:', params.safeAddress);
+        
+        return ownersAddress;
+      } catch (error) {
+        console.error('Error getting owners:', error);
+        setError(error instanceof Error ? error.message : 'Failed to get owners');
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    
+    getOwnerDetails: async (params) => {
+      // Placeholder
+      return { address: params.owner };
+    },
+    
+    getTransactionCount: async (params) => {
+      // Placeholder
+      return transactions.length;
+    },
+    
+    getUserTransactions: async (params) => {
+      // Placeholder
+      return transactions.filter(tx => 
+        (tx as unknown as PaymentTransactions).owneraddress === params.user
+      );
+    },
+    
+    getSafeOwners: async (params) => {
+      // Placeholder - same as getOwners for now
+      return ownersAddress;
+    },
+    
+    isOwnerAddress: async (params) => {
+      return ownersAddress.includes(params.owner);
+    },
+    
+    getTotalWeight: async (params) => {
+      // Placeholder
+      return ownersAddress.length;
+    },
+    
+    getThreshold: async (params) => {
+      // Placeholder
+      return 1; // Default threshold
+    },
 
-    // Transaction methods (placeholders)
-    getAllSafeTransactions: async () => {},
-    getAllTransactions: async () => [],
+    // Transaction methods
+    getAllSafeTransactions: async () => {
+      try {
+        setIsLoading(true);
+        
+        // In a real implementation, you would fetch transactions from the blockchain
+        console.log('Getting all safe transactions');
+        
+        // For now, just returning the existing transactions
+        setAllSafeTransactions(transactions as any[]);
+      } catch (error) {
+        console.error('Error getting safe transactions:', error);
+        setError(error instanceof Error ? error.message : 'Failed to get safe transactions');
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    
+    getAllTransactions: async (safeInfoParam) => {
+      try {
+        setIsLoading(true);
+        
+        // In a real implementation, you would fetch transactions from the blockchain
+        console.log('Getting all transactions for safe:', safeInfoParam);
+        
+        return transactions;
+      } catch (error) {
+        console.error('Error getting transactions:', error);
+        setError(error instanceof Error ? error.message : 'Failed to get transactions');
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    
+    getTransactionDetails: async (params) => {
+      // Placeholder
+      return transactions[params.transactionId];
+    },
+    
+    sendSafeTransaction: async (transactionData) => {
+      // Placeholder
+      console.log('Sending safe transaction:', transactionData);
+    },
+    
+    checkIsSigned: async (transactionHash) => {
+      // Placeholder
+      setIsUserAlreadySigned(false);
+    },
+    
+    // Implement transaction methods that were defined earlier
+    checkIfTxnExecutable,
+    proposeTransaction,
+    approveTransfer,
+    rejectTransfer,
+    executeTransaction,
+    
+    executeSafeTransaction: async (transaction) => {
+      try {
+        setIsLoading(true);
+        
+        // In a real implementation, you would execute the safe transaction on the blockchain
+        console.log('Executing safe transaction:', transaction);
+        
+        // Update transaction status
+        await updateTransactionStatus(transaction, 'complete');
+        
+        return { success: true, transaction };
+      } catch (error) {
+        console.error('Error executing safe transaction:', error);
+        setError(error instanceof Error ? error.message : 'Failed to execute safe transaction');
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    
+    updateTransactionStatus,
+    
+    updateTransactionStatusHere: async (params) => {
+      try {
+        setIsLoading(true);
+        
+        // In a real implementation, you would update the transaction status on the blockchain
+        console.log(`Updating transaction ${params.transactionHash} status to ${params.status}`);
+        
+        // Update status in local state
+        setTransactionStatus(prev => ({
+          ...prev,
+          [params.transactionHash]: params.status
+        }));
+        
+        return { success: true, status: params.status };
+      } catch (error) {
+        console.error('Error updating transaction status:', error);
+        setError(error instanceof Error ? error.message : 'Failed to update transaction status');
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  return (
+    <SafeContext.Provider value={contextValue}>
+      {children}
+    </SafeContext.Provider>
+  );
+};
+
+export default SafeContextProvider;

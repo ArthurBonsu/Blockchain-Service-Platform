@@ -63,6 +63,7 @@ const ProposeTransfer: FC = () => {
       setPendingProposalData(transactionWithStatus);
       
       // Send to blockchain/backend
+      // Simplified to match the context method signature
       await proposeTransaction(transactionWithStatus);
       
       setIsProposed(true);

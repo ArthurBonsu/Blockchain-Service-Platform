@@ -2,10 +2,10 @@ import React, { useState, useEffect, createContext, ReactNode, useCallback, useC
 import { ethers } from 'ethers';
 
 // ABI imports
-import ElectricityPaymentContractABI from '../constants/abis/ElectricityPaymentContract.json';
-import ERC20ABI from '../constants/abis/ERC20.json';
+import ElectricityPaymentContractABI from '../build/contracts/ElectricityPaymentContract.json';
+import ERC20ABI from '../build/contracts/ERC20.json';
 
-// Types
+// Types (keeping all original interfaces)
 interface ElectricityFormData {
   houseId: string;
   billId: string;
@@ -356,4 +356,13 @@ export const ElectricityPaymentProvider: React.FC<{ children: ReactNode }> = ({ 
       {children}
     </ElectricityPaymentContext.Provider>
   );
+};
+
+// Optional: Create a custom hook for easier context consumption
+export const useElectricityPayment = () => {
+  const context = useContext(ElectricityPaymentContext);
+  if (context === undefined) {
+    throw new Error('useElectricityPayment must be used within an ElectricityPaymentProvider');
+  }
+  return context;
 };

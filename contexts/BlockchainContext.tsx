@@ -4,7 +4,7 @@ import Web3 from 'web3';
 import { Contract } from 'web3-eth-contract';
 import { loadContracts, PasschainContract } from '../utils/contract-loader';
 import { Logger } from '../utils/logger';
-import { useTransactions } from '../contexts/TransactionContext';
+import { useTransactionContext } from '../contexts/useTransactionContext';
 import networkConfig from '../config/network_config';
 import { createTatumBlockchainService, TatumConnectionOptions } from '../services/tatum-blockchain-service';
 import { TatumConstants } from '../config/tatum-config';
@@ -44,15 +44,11 @@ interface BlockchainContextType {
 }
 
 // Existing type definitions
-type ContractType = (Contract<any> & { 
+type ContractType = Contract & { 
   options?: { 
     address?: string 
   }; 
-}) | (PasschainContract & {
-  options?: { 
-    address?: string 
-  };
-});
+} | PasschainContract;
 
 interface NetworkSwitchOptions {
   chainId?: number;
@@ -99,7 +95,7 @@ export const BlockchainProvider: React.FC<PropsWithChildren> = ({ children }) =>
   const [isContractInitialized, setIsContractInitialized] = useState(false);
 
   // Use transactions context
-  const { addTransaction } = useTransactions();
+  const { addTransaction } = useTransactionContext();
 
   // Type-safe contract address retrieval
   const getContractAddress = (contract: ContractType): string => {

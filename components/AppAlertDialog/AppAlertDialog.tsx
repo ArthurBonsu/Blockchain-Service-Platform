@@ -11,14 +11,16 @@ import {
 } from '@chakra-ui/react';
 import { FC, useRef, useEffect, useState } from 'react';
 
+ 
 interface AppAlertDialogProps {
   customOnClose: () => void;
   disclosure: UseDisclosureReturn;
   isLoading: boolean;
   handleSubmit: () => void;
   header?: string;
-  body?: string;
+  body?: React.ReactNode;
 }
+
 
 const AppAlertDialog: FC<AppAlertDialogProps> = ({
   customOnClose,
