@@ -147,7 +147,7 @@ const LoadSafeTransfer: React.FC<ExecuteTransferProps> = ({
   return (
     <div>
       <Button {...rest} onClick={localDisclosure.onOpen}>
-        Execute
+        ExecuteS
       </Button>
       <AppModal
         disclosure={localDisclosure}
